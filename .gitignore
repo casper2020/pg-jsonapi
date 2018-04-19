@@ -1,0 +1,9 @@
+.DS_Store
+build
+*.o
+operation_request.cc
+query_builder.cc
+pg-jsonapi*.so
+pg-jsonapi.control
+pg_jsonapi.xcodeproj/project.xcworkspace
+pg_jsonapi.xcodeproj/xcuserdata/

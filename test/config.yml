@@ -1,0 +1,8 @@
+server:
+  port: 9002
+
+pg:
+  host: 127.0.0.1
+  dbname: cloudware_test_jsonapi
+  user: joana
+

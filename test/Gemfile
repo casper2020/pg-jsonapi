@@ -1,0 +1,12 @@
+source "http://rubygems.org"
+
+gem 'rake'
+gem 'sinatra'
+gem 'rspec'
+gem 'pg'
+gem 'byebug'
+gem 'rack-test'
+
+group :development do
+  gem 'net-ssh', '2.7.0'
+end

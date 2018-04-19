@@ -1,0 +1,49 @@
+GEM
+  remote: http://rubygems.org/
+  specs:
+    byebug (5.0.0)
+      columnize (= 0.9.0)
+    columnize (0.9.0)
+    diff-lcs (1.2.5)
+    net-ssh (2.7.0)
+    pg (0.18.2)
+    rack (1.6.1)
+    rack-protection (1.5.3)
+      rack
+    rack-test (0.6.3)
+      rack (>= 1.0)
+    rake (10.4.2)
+    rspec (3.2.0)
+      rspec-core (~> 3.2.0)
+      rspec-expectations (~> 3.2.0)
+      rspec-mocks (~> 3.2.0)
+    rspec-core (3.2.3)
+      rspec-support (~> 3.2.0)
+    rspec-expectations (3.2.1)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.2.0)
+    rspec-mocks (3.2.1)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.2.0)
+    rspec-support (3.2.2)
+    sinatra (1.4.6)
+      rack (~> 1.4)
+      rack-protection (~> 1.4)
+      tilt (>= 1.3, < 3)
+    tilt (2.0.1)
+
+PLATFORMS
+  java
+  ruby
+
+DEPENDENCIES
+  byebug
+  net-ssh (= 2.7.0)
+  pg
+  rack-test
+  rake
+  rspec
+  sinatra
+
+BUNDLED WITH
+   1.10.2

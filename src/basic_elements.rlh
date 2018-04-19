@@ -1,0 +1,221 @@
+/**
+ * @file basic_elements.rlh Definitions of basic elements used on parsers.
+ *
+ * Copyright (c) 2011-2018 Cloudware S.A. All rights reserved.
+ *
+ * This file is part of pg-jsonapi.
+ *
+ * pg-jsonapi is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * pg-jsonapi is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with pg-jsonapi.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#pragma GCC diagnostic ignored "-Wunused-variable"
+%%{
+    machine RequestBasicElements;
+
+    action save_base_url
+    {
+        rq_base_url_      = std::string(start, 0, fpc - start);
+    }
+
+    action save_resource_type
+    {
+        rq_resource_type_ = std::string(start, 0, fpc - start);
+    }
+
+    action save_resource_id
+    {
+        rq_resource_id_   = pg_jsonapi::Utils::urlDecode(start, fpc - start);
+    }
+
+    action save_relationship
+    {
+        rq_relationship_  = true;
+    }
+
+    action save_related
+    {
+        rq_related_       = pg_jsonapi::Utils::urlDecode(start, fpc - start);
+    }
+
+    action save_attribute
+    {
+        rq_attribute_     = pg_jsonapi::Utils::urlDecode(start, fpc - start);
+    }
+
+    action save_page_size
+    {
+        rq_page_size_param_ = strtoul(std::string(start, 0, fpc - start).c_str(), NULL, 10);
+    }
+
+    action save_page_number
+    {
+        rq_page_number_param_ = strtoul(std::string(start, 0, fpc - start).c_str(), NULL, 10);
+    }
+
+    action inc_s
+    {
+        if ( has_include ) {
+            ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "include param can only be specified once");
+            e.SetSourceParam("include");
+            return false;
+        }
+        has_include = true;
+        start = fpc;
+    }
+
+    action sort_s
+    {
+        if ( ! rq_sort_param_.empty() ) {
+            ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "sort param can only be specified once");
+            e.SetSourceParam("sort");
+            return false;
+        }
+    }
+
+    action save_include
+    {
+        field = pg_jsonapi::Utils::urlDecode(start, fpc - start);
+        if ( rq_include_param_.count(field) ) {
+            ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "include param cannot contain duplicated fields");
+            e.SetSourceParam("include");
+            return false;
+        }
+        rq_include_param_.insert(field);
+    }
+
+    action save_sort
+    {
+        const char* order = "ASC";
+        if ( '-' == *start ) {
+            order = "DESC";
+            start++;
+        } else if ( '+' == *start ) {
+            start++;
+        }
+        field = pg_jsonapi::Utils::urlDecode(start, fpc - start);
+        rq_sort_param_.push_back(std::make_pair(field, order));
+    }
+
+    action save_field_type
+    {
+        std::string tmp_ = pg_jsonapi::Utils::urlDecode(key_s, fpc - key_s);
+
+        type = std::string(tmp_, 0, tmp_.length()-2);
+        if ( rq_fields_param_.count(type) ) {
+            ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "fields param can only be specified once for each type");
+            e.SetSourceParam("fields[%s]", type.c_str());
+            return false;
+        }
+    }
+
+    action save_field
+    {
+        std::string tmp_ = pg_jsonapi::Utils::urlDecode(start, fpc - start);
+        if ( tmp_.length() > 0 && ',' == tmp_[tmp_.length()-1] ) {
+            rq_fields_param_[type].insert(std::string(tmp_, 0, tmp_.length()-1));
+        } else {
+            rq_fields_param_[type].insert(tmp_);
+        }
+    }
+
+    action save_filter_field
+    {
+        if ( NULL != key_s ) {
+            field = std::string(key_s, 0, key_e - key_s);
+            if ( rq_filter_field_param_.count(field) ) {
+                ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "filter by field param can only be specified once for each field");
+                e.SetSourceParam("filter[%s]", field.c_str());
+                return false;
+            }
+            rq_filter_field_param_[field] = pg_jsonapi::Utils::urlDecode(start, fpc - start);
+        } else {
+            std::string decoded_filter_ = pg_jsonapi::Utils::urlDecode(start, fpc - start);
+            if ( ! rq_filter_param_.empty() ) {
+                ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "filter param (without field) can only be specified once - fpc=%s", decoded_filter_.c_str());
+                e.SetSourceParam("filter");
+                return false;
+            }
+
+            if ( decoded_filter_.length() < 2 || '"' != decoded_filter_[decoded_filter_.length()-1] ) {
+                ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "filter param (without field) must end with double quote - fpc=%s", decoded_filter_.c_str());
+                e.SetSourceParam("filter");
+                return false;
+            }
+            for ( const char* src = decoded_filter_.c_str() + 1; src < decoded_filter_.c_str() + decoded_filter_.length()-1 ; ++src ) {
+                if ( *(src) != '\\' ) {
+                    rq_filter_param_ += *(src);
+                } else {
+                    switch ( *(++src) ) {
+                        case '"':
+                            rq_filter_param_ += *(src);
+                            break;
+                        default:
+                            ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "filter param (without field) has unxepected characters");
+                            e.SetSourceParam("filter");
+                            return false;
+                    }
+                }
+            }
+        }
+
+    }
+
+    # basic characters
+    square_bracket_left  = ('[' | '%5B');
+    square_bracket_right = (']' | '%5D');
+
+    equal_char   = ( '=' | '%3D' );
+    double_quote = ( '"' | '%22' );
+    comma_char   = ( ',' | '%2C' );
+
+    # definitions
+    overall   = [a-zA-Z0-9];
+
+    other     = [\-_];
+    any_other = ( other | "%2D" | "%5F" );
+    any_char  = (overall | other | "%2D" | "%5F" );
+
+    res_id    = [^?#/]+;
+    res_type  = overall (overall |any_other)* overall;
+    res_path  = res_type ('.' res_type)? ;
+    inc_path  = (zlen res_type %save_include ('.' zlen res_type %save_include)* );
+    field_list = ( (zlen >{ start = fpc;} res_type) (comma_char %save_field %{ start = fpc;} res_type)* %save_field )?;
+    sort_arg  = (zlen >{ start = fpc;} ('+' | '-')? res_type %save_sort );
+
+    # request
+    base_url     = (zlen >{ start = fpc;} 'http' 's'?'://' [^/]+ ) %save_base_url;
+    resource     = (zlen >{ start = fpc;} res_type)                %save_resource_type;
+    id           = (zlen >{ start = fpc;} res_id  )                %save_resource_id;
+    relationship = ( '/' 'relationships' )                         %save_relationship;
+    related      = (zlen >{ start = fpc;} res_type)                %save_related;
+    attribute    = (zlen >{ start = fpc;} res_type)                %save_attribute;
+
+    #  parameters
+    include_p       = ( 'include' equal_char %inc_s inc_path (comma_char %{ start = fpc;} inc_path)* );
+    sort_p          = ( 'sort' equal_char %sort_s sort_arg (comma_char sort_arg )* );
+    fields_p        = ( 'fields' square_bracket_left %{ key_s = fpc;} res_type square_bracket_right equal_char ) %save_field_type field_list ;
+    filter_p        = ( 'filter' %{ key_s = NULL; key_e = NULL;} ( square_bracket_left %{ key_s = fpc;} res_path %{key_e = fpc;}  square_bracket_right ) ? equal_char %{ start = fpc;} [^&]* ) %save_filter_field;
+    links_p         = ( 'links' equal_char ( '0' %{rq_links_param_ = 0;} | '1' %{rq_links_param_ = 1;} ) );
+    totals_p        = ( 'totals' equal_char ( '0' %{rq_totals_param_ = 0;} | '1' %{rq_totals_param_ = 1;} ) );
+    null_p          = ( 'null' equal_char ( '0' %{rq_null_param_ = 0;} | '1' %{rq_null_param_ = 1;} ) );
+    page_size_p     = ( 'page' square_bracket_left 'size' square_bracket_right equal_char %{ start = fpc;} [0-9]+ %save_page_size );
+    page_number_p   = ( 'page' square_bracket_left 'number' square_bracket_right equal_char %{ start = fpc;} [1-9][0-9]* %save_page_number );
+
+    jsonapi_param   = ( include_p | sort_p | fields_p | page_size_p | page_number_p );
+    internal_param  = ( links_p | null_p | totals_p );
+    param           = ( jsonapi_param | internal_param | filter_p );
+
+}%%
+#pragma GCC diagnostic warning "-Wunused-variable"
+
