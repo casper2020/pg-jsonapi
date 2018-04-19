@@ -1,7 +1,7 @@
 # pg-jsonapi
-JSON API implementation for [https://www.postgresql.org](PostgresSQL) using [https://www.postgresql.org/docs/current/static/spi.html](SPI).
+JSON API implementation for [PostgresSQ](Lhttps://www.postgresql.org) using [SPI](https://www.postgresql.org/docs/current/static/spi.html).
 
-Implementation supports [http://jsonapi.org/format/#status](v1.0) and supports [http://jsonapi.org/extensions/#prior-extensions](prior extensions) partially.
+Implementation supports [v1.0](http://jsonapi.org/format/#status) and supports partially [prior extensions](http://jsonapi.org/extensions/#prior-extensions).
 
-Server default behaviour may change according to the [https://github.com/casper2020/pg-jsonapi/blob/master/CONFIGURATION.md](configuration).
+Server default behaviour may change according to the [configuration](https://github.com/casper2020/pg-jsonapi/blob/master/CONFIGURATION.md).
 
