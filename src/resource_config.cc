@@ -632,6 +632,10 @@ bool pg_jsonapi::ResourceConfig::ValidatePG(bool a_specific_request)
 {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s %s", __FUNCTION__, type_.c_str())));
 
+    if ( 0 != GetJobTube().length() ) {
+      return true;
+    }
+
     if ( a_specific_request && q_main_.needs_search_path_ ) {
         g_qb->RequireSearchPath();
     }
