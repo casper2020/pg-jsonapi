@@ -630,17 +630,13 @@ Oid pg_jsonapi::ResourceConfig::GetRelid(std::string a_type, std::string a_relna
  */
 bool pg_jsonapi::ResourceConfig::ValidatePG(bool a_specific_request)
 {
-    ereport(DEBUG3, (errmsg_internal("jsonapi: %s %s", __FUNCTION__, type_.c_str())));
-
-    if ( 0 != GetJobTube().length() ) {
-      return true;
-    }
+    ereport(DEBUG3, (errmsg_internal("jsonapi: %s %s - %s", __FUNCTION__, type_.c_str(), a_specific_request ? "true" : "false")));
 
     if ( a_specific_request && q_main_.needs_search_path_ ) {
         g_qb->RequireSearchPath();
     }
 
-    if ( q_main_.use_rq_accounting_schema_ || q_main_.use_rq_sharded_schema_ || q_main_.use_rq_company_schema_ || q_main_.use_rq_accounting_prefix_ || IsQueryFromFunction() ) {
+    if ( q_main_.use_rq_accounting_schema_ || q_main_.use_rq_sharded_schema_ || q_main_.use_rq_company_schema_ || q_main_.use_rq_accounting_prefix_ || IsQueryFromFunction() || GetJobTube().length() ) {
         if ( a_specific_request ) {
             if ( 0 == g_qb->GetRequestAccountingSchema().length() && (q_main_.use_rq_accounting_schema_ || q_main_.function_arg_rq_accounting_schema_.length() ) ) {
                 g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "requests for resource '%s' require parameter 'accounting_schema'",
@@ -672,7 +668,7 @@ bool pg_jsonapi::ResourceConfig::ValidatePG(bool a_specific_request)
                                                                                               type_.c_str());
                 return false;
             }
-            if ( !IsQueryFromFunction() ) {
+            if ( !IsQueryFromFunction() && !g_qb->IsTopQueryFromJobTube() ) {
                 std::string table_name;
                 if ( q_main_.use_rq_accounting_prefix_ ) {
                     table_name = g_qb->GetRequestAccountingPrefix();
