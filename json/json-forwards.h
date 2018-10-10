@@ -112,12 +112,6 @@ license you like.
 /// Only has effects if JSONAPI_JSON_VALUE_USE_INTERNAL_MAP is defined.
 //#  define JSONAPI_JSON_USE_SIMPLE_INTERNAL_ALLOCATOR 1
 
-// If non-zero, the library uses exceptions to report bad input instead of C
-// assertion macros. The default is to use exceptions.
-#ifndef JSONAPI_JSON_USE_EXCEPTION
-#define JSONAPI_JSON_USE_EXCEPTION 1
-#endif
-
 /// If defined, indicates that the source file is amalgated
 /// to prevent private header inclusion.
 /// Remarks: it is automatically defined in the generated amalgated header.

@@ -127,6 +127,8 @@ jsonapi_common(text* a_method,
                         }
                     }
                 }
+            } catch (const std::runtime_error& a_rte) {
+                g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA006"), pg_jsonapi::E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "%s", a_rte.what());
             } catch (...) {
                 g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA006"), pg_jsonapi::E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "exception...");
             }

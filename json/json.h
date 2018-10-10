@@ -139,12 +139,6 @@ license you like.
 /// Only has effects if JSONAPI_JSON_VALUE_USE_INTERNAL_MAP is defined.
 //#  define JSONAPI_JSON_USE_SIMPLE_INTERNAL_ALLOCATOR 1
 
-// If non-zero, the library uses exceptions to report bad input instead of C
-// assertion macros. The default is to use exceptions.
-#ifndef JSONAPI_JSON_USE_EXCEPTION
-#define JSONAPI_JSON_USE_EXCEPTION 1
-#endif
-
 /// If defined, indicates that the source file is amalgated
 /// to prevent private header inclusion.
 /// Remarks: it is automatically defined in the generated amalgated header.
@@ -1973,34 +1967,26 @@ JSONAPI_JSON_API std::ostream &operator<<(std::ostream &, const Value &root);
 #ifdef POSTGRES_C_EXTENSION
 extern "C" {
 #include "postgres.h"
+    
 }
-#define JSONAPI_JSON_ASSERT(condition) Assert(condition)
-#define JSONAPI_JSON_FAIL_MESSAGE(message) ereport(ERROR, (errmsg_internal("json: %s", message)));
-#elif JSONAPI_JSON_USE_EXCEPTION
+#endif
+
 #include <stdexcept>
-#define JSONAPI_JSON_ASSERT(condition)                                                 \
-  assert(condition); // @todo <= change this into an exception throw
-#define JSONAPI_JSON_FAIL_MESSAGE(message) throw std::runtime_error(message);
-#else // JSONAPI_JSON_USE_EXCEPTION
-#define JSONAPI_JSON_ASSERT(condition) assert(condition);
+#define JSONAPI_JSON_ASSERT(condition)                      \
+  do { if (!(condition)) {                                  \
+      JSONAPI_JSON_FAIL_MESSAGE("jsonapi: caught assert");  \
+  }} while(0)
 
 // The call to assert() will show the failure message in debug builds. In
 // release bugs we write to invalid memory in order to crash hard, so that a
 // debugger or crash reporter gets the chance to take over. We still call exit()
 // afterward in order to tell the compiler that this macro doesn't return.
-#define JSONAPI_JSON_FAIL_MESSAGE(message)                                             \
-  {                                                                            \
-    assert(false &&message);                                                   \
-    strcpy(reinterpret_cast<char *>(666), message);                            \
-    exit(123);                                                                 \
-  }
+#define JSONAPI_JSON_FAIL_MESSAGE(message) throw std::runtime_error(message)
 
-#endif
-
-#define JSONAPI_JSON_ASSERT_MESSAGE(condition, message)                                \
-  if (!(condition)) {                                                          \
-    JSONAPI_JSON_FAIL_MESSAGE(message)                                                 \
-  }
+#define JSONAPI_JSON_ASSERT_MESSAGE(condition, message) \
+  do { if (!(condition)) {                              \
+      JSONAPI_JSON_FAIL_MESSAGE(message);               \
+  }} while(0)
 
 #endif // JSONAPI_CPPTL_JSON_ASSERTIONS_H_INCLUDED
 
