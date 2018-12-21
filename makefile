@@ -48,7 +48,7 @@ EXTVERSION  := $(LIB_VERSION)
 SHLIB_LINK  := -lstdc++ $(LINK_FLAGS)
 PG_CPPFLAGS := -fPIC $(CFLAGS) $(CXXFLAGS) $(OTHER_CFLAGS)
 MODULE_big  := $(LIB_NAME)
-PG_CONFIG   := pg_config
+PG_CONFIG   ?= pg_config
 EXTRA_CLEAN := $(RAGEL_FILES:.rl=.cc) $(LIB_NAME).so*
 
 PGXS        := $(shell $(PG_CONFIG) --pgxs)
