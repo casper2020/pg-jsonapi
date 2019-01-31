@@ -3,6 +3,7 @@
 Table `public.jsonapi_config` may be used to configure the `jsonapi` function behaviour.
 
 Each support URL prefix (HTTP schema and host) may have a JSON configuration with global options and valid `resources`.
+If there isn't a specific configuration for the request prefix, it will be checked if there's a fallback configuration for prefix 'default'.
 Fields not defined as to-one or to-many relationships are automatically assumed to be attributes.
 
 
