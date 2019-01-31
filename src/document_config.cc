@@ -100,18 +100,32 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB()
     if ( ! g_qb->SPIExecuteCommand(ConfigQuery(), SPI_OK_SELECT) ) {
         return false;
     }
-
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s SPI_processed=%d", __FUNCTION__, (int)SPI_processed)));
-
-    if ( 0 == SPI_processed ) {
-        ereport(LOG, (errmsg_internal("jsonapi: no configuration for '%s' statement: %s",
-                                      base_url_.c_str(), ConfigQuery().c_str() )));
-        // configuration is *not* mandatory
-    } else if ( 1 != SPI_processed ) {
+    if ( SPI_processed > 1 ) {
         g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "too many rows (%d) returned for '%s' statement: %s",
 																							   (int)SPI_processed, base_url_.c_str(), ConfigQuery().c_str());
         rv = false;
-    } else {
+    }
+    if ( 0 == SPI_processed ) {
+        ereport(LOG, (errmsg_internal("jsonapi: no specific configuration for prefix '%s' statement: %s",
+                                      base_url_.c_str(), ConfigQuery().c_str() )));
+        // configuration is *not* mandatory, try default
+        if ( ! g_qb->SPIExecuteCommand(DefaultConfigQuery(), SPI_OK_SELECT) ) {
+            return false;
+        }
+        ereport(DEBUG3, (errmsg_internal("jsonapi: %s SPI_processed=%d", __FUNCTION__, (int)SPI_processed)));
+        if ( SPI_processed > 1 ) {
+            g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "too many rows (%d) returned for '%s' statement: %s",
+                                                                                                   (int)SPI_processed, base_url_.c_str(), DefaultConfigQuery().c_str());
+            rv = false;
+        }
+        else {
+            ereport(LOG, (errmsg_internal("jsonapi: %s default configuration for prefix '%s' statement: %s",
+                                          ( 0 == SPI_processed ) ? "no" : "using",
+                                          base_url_.c_str(), DefaultConfigQuery().c_str() )));
+        }
+    }
+    if ( 1 == SPI_processed ) {
         char* config_s = SPI_getvalue(SPI_tuptable->vals[0], SPI_tuptable->tupdesc, 1);
 
         if ( NULL == config_s || 0 == strlen(config_s) ) {

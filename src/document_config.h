@@ -45,6 +45,7 @@ namespace pg_jsonapi
         bool        is_valid_;
         std::string base_url_;
         std::string query_config_;
+        std::string query_default_config_;
         bool        version_;
         bool        compound_;
         uint        page_size_;
@@ -107,6 +108,7 @@ namespace pg_jsonapi
         const ResourceConfig& GetResource (const std::string& a_type) const;
 
         const std::string&    ConfigQuery ();
+        const std::string&    DefaultConfigQuery ();
     };
 
     typedef std::map<std::string, DocumentConfig> DocumentConfigMap;
@@ -275,6 +277,14 @@ namespace pg_jsonapi
             query_config_ = "SELECT config FROM public.jsonapi_config WHERE prefix = '" + base_url_ + "'";
         }
         return query_config_;
+    }
+
+    inline const std::string& DocumentConfig::DefaultConfigQuery ()
+    {
+        if ( 0 == query_default_config_.size() ) {
+            query_default_config_ = "SELECT config FROM public.jsonapi_config WHERE prefix = 'default'";
+        }
+        return query_default_config_;
     }
 
     inline pg_jsonapi::ResourceConfig* pg_jsonapi::DocumentConfig::Resource (const std::string& a_type)
