@@ -147,24 +147,16 @@
                 return false;
             }
 
-            if ( decoded_filter_.length() < 2 || '"' != decoded_filter_[decoded_filter_.length()-1] ) {
-                ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "filter param (without field) must end with double quote - fpc=%s", decoded_filter_.c_str());
+            if ( decoded_filter_.length() < 2 || '"' != decoded_filter_[0] || '"' != decoded_filter_[decoded_filter_.length()-1] ) {
+                ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "filter param (without field) must start and end with double quote - fpc=%s", decoded_filter_.c_str());
                 e.SetSourceParam("filter");
                 return false;
             }
             for ( const char* src = decoded_filter_.c_str() + 1; src < decoded_filter_.c_str() + decoded_filter_.length()-1 ; ++src ) {
-                if ( *(src) != '\\' ) {
-                    rq_filter_param_ += *(src);
+                if ( '\\' == *(src) && '"' == *(src+1) ) {
+                    rq_filter_param_ += *(++src);
                 } else {
-                    switch ( *(++src) ) {
-                        case '"':
-                            rq_filter_param_ += *(src);
-                            break;
-                        default:
-                            ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "filter param (without field) has unxepected characters");
-                            e.SetSourceParam("filter");
-                            return false;
-                    }
+                    rq_filter_param_ += *(src);
                 }
             }
         }
