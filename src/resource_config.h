@@ -113,6 +113,7 @@ namespace pg_jsonapi
             bool             show_links_;
             bool             show_null_;
             std::string      col_id_;
+            std::string      company_column_;
             std::string      condition_;
             std::string      job_tube_;
             StringSet        job_methods_;
@@ -190,6 +191,7 @@ namespace pg_jsonapi
         const std::string&       GetPGQueryColumns                () const;
         const std::string&       GetPGQueryColumn                 (const std::string& a_field) const;
         const std::string&       GetPGQueryCastedColumn           (const std::string& a_field) const;
+        const std::string&       GetPGQueryCompanyColumn          () const;
         const std::string&       GetPGQueryCondition              () const;
         const std::string&       GetPGQueryOrder                  () const;
         size_t                   PageSize                         () const;
@@ -285,6 +287,11 @@ namespace pg_jsonapi
         } else {
             return GetPGQueryColumn(a_field);
         }
+    }
+
+    inline const std::string& ResourceConfig::GetPGQueryCompanyColumn () const
+    {
+        return q_main_.company_column_;
     }
 
     inline const std::string& ResourceConfig::GetPGQueryCondition () const

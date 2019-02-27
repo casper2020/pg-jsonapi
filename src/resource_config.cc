@@ -40,6 +40,7 @@ pg_jsonapi::ResourceConfig::ResourceConfig (const DocumentConfig* a_parent_doc, 
     q_main_.returns_json_             = false;
     q_main_.needs_search_path_        = false;
     q_main_.col_id_                   = "id";
+    q_main_.company_column_.clear();
     q_main_.condition_.clear();
     q_main_.order_by_                 = parent_doc_->DefaultOrder();
     if ( parent_doc_->HasAttrRestriction() ) {
@@ -393,11 +394,11 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
     q_main_.show_links_ = parent_doc_->ShowLinks();
     q_main_.show_null_ = parent_doc_->ShowNull();
     q_main_.col_id_ = "id";
+    q_main_.company_column_.clear();
     q_main_.condition_.clear();
     q_main_.select_columns_.clear();
 
     BoolOption bool_options[] = {
-
         {"request-accounting-schema",   &q_main_.use_rq_accounting_schema_},
         {"request-sharded-schema",      &q_main_.use_rq_sharded_schema_},
         {"request-company-schema",      &q_main_.use_rq_company_schema_},
@@ -417,6 +418,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
         {"pg-attributes-function",                  &q_main_.attributes_function_},
         {"pg-order-by",                             &q_main_.order_by_},
         {"pg-id",                                   &q_main_.col_id_},
+        {"pg-company-column",                       &q_main_.company_column_},
         {"pg-condition",                            &q_main_.condition_},
         {"job-tube",                                &q_main_.job_tube_},
         {"request-accounting-schema-function-arg",  &q_main_.function_arg_rq_accounting_schema_},
@@ -660,6 +662,11 @@ bool pg_jsonapi::ResourceConfig::ValidatePG(bool a_specific_request)
             }
             if ( 0 == g_qb->GetRequestUser().length() && q_main_.function_arg_rq_user_.length() ) {
                 g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "requests for resource '%s' require parameter 'user_id'",
+                                                                                              type_.c_str());
+                return false;
+            }
+            if ( 0 == g_qb->GetRequestCompany().length() && GetPGQueryCompanyColumn().length() ) {
+                g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "requests for resource '%s' require parameter 'company_id'",
                                                                                               type_.c_str());
                 return false;
             }

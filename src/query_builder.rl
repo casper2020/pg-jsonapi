@@ -1046,6 +1046,11 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
         condition_start = " WHERE ";
         condition_separator = " AND ";
         condition_operator = " = ";
+        /* company column */
+        if ( rc.GetPGQueryCompanyColumn().size() ) {
+            q_buffer_ += condition_start + "\"" + rc.GetPGQueryCompanyColumn() + "\" = " + GetRequestCompany();
+            condition_start = condition_separator;
+        }
     }
 
     /* query condition */
