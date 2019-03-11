@@ -107,7 +107,7 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB()
         rv = false;
     }
     if ( 0 == SPI_processed ) {
-        ereport(LOG, (errmsg_internal("jsonapi: no specific configuration for prefix '%s' statement: %s",
+        ereport(DEBUG1, (errmsg_internal("jsonapi: no specific configuration for prefix '%s' statement: %s",
                                       base_url_.c_str(), ConfigQuery().c_str() )));
         // configuration is *not* mandatory, try default
         if ( ! g_qb->SPIExecuteCommand(DefaultConfigQuery(), SPI_OK_SELECT) ) {
@@ -120,7 +120,7 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB()
             rv = false;
         }
         else {
-            ereport(LOG, (errmsg_internal("jsonapi: %s default configuration for prefix '%s' statement: %s",
+            ereport(DEBUG1, (errmsg_internal("jsonapi: %s default configuration for prefix '%s' statement: %s",
                                           ( 0 == SPI_processed ) ? "no" : "using",
                                           base_url_.c_str(), DefaultConfigQuery().c_str() )));
         }
