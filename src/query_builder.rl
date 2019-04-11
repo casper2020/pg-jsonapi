@@ -723,7 +723,7 @@ bool pg_jsonapi::QueryBuilder::ProcessCounter (size_t& a_count)
 
     if (   1 != SPI_processed
         || 1 != SPI_tuptable->tupdesc->natts
-        || INT8OID != SPI_tuptable->tupdesc->attrs[0]->atttypid ) {
+        || INT8OID != TupleDescAttr(SPI_tuptable->tupdesc,0)->atttypid ) {
         return false;
     }
     datum = SPI_getbinval(SPI_tuptable->vals[0], SPI_tuptable->tupdesc, 1, &is_null);
@@ -769,7 +769,7 @@ bool pg_jsonapi::QueryBuilder::ProcessAttributes(const std::string& a_type, size
         q_data_[a_type].items_[row].serialized_ = false;
         /* 'id' column should always be the first field returned from query, and we could avoid strcmp loop... */
         for (int col = 1; NULL == q_data_[a_type].items_[row].id_ && col <= q_data_[a_type].tupdesc_->natts; col++) {
-            const char* attname = NameStr(q_data_[a_type].tupdesc_->attrs[col-1]->attname);
+            const char* attname = NameStr(TupleDescAttr(q_data_[a_type].tupdesc_,col-1)->attname);
             if ( 0 == strcmp(attname, "id") ) {
                 SPI_getbinval(q_data_[a_type].items_[row].res_tuple_, q_data_[a_type].tupdesc_, col, &is_null);
                 if ( is_null ) {
@@ -793,7 +793,7 @@ bool pg_jsonapi::QueryBuilder::ProcessAttributes(const std::string& a_type, size
             return false;
         }
         for (int col = 1; col <= q_data_[a_type].tupdesc_->natts; col++) {
-            const char* attname = NameStr(q_data_[a_type].tupdesc_->attrs[col-1]->attname);
+            const char* attname = NameStr(TupleDescAttr(q_data_[a_type].tupdesc_,col-1)->attname);
             if ( config_->GetResource(a_type).IsRelationship(attname) ) {
                 const char* rel_id = SPI_getvalue(q_data_[a_type].items_[row].res_tuple_, q_data_[a_type].tupdesc_, col);
                 if ( NULL != rel_id ) {
@@ -830,11 +830,11 @@ bool pg_jsonapi::QueryBuilder::ProcessRelationships(const std::string& a_type, s
 {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s a_type:%s", __FUNCTION__, a_type.c_str())));
 
-    const char* attname = NameStr(SPI_tuptable->tupdesc->attrs[1]->attname);
+    const char* attname = NameStr(TupleDescAttr(SPI_tuptable->tupdesc,1)->attname);
     bool top_related = ( 0 == a_depth && HasRelated() && !IsRelationship() && attname == GetRelated() );
 
     if (   2 != SPI_tuptable->tupdesc->natts
-        || strcmp(NameStr(SPI_tuptable->tupdesc->attrs[0]->attname), "id")
+        || strcmp(NameStr(TupleDescAttr(SPI_tuptable->tupdesc,0)->attname), "id")
         || ! config_->GetResource(a_type).IsRelationship(attname) ) {
         AddError(JSONAPI_MAKE_SQLSTATE("JA016"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid query column '%s' returned for resource '%s'", attname, a_type.c_str());
         return false;
@@ -1478,7 +1478,7 @@ void pg_jsonapi::QueryBuilder::SerializeResource (StringInfoData& a_response, co
     const char* field_start = ",\"attributes\":{";
 
     for (int col = 1; col <= res_tupdesc->natts; col++) {
-        const char* attname = NameStr(res_tupdesc->attrs[col-1]->attname);
+        const char* attname = NameStr(TupleDescAttr(res_tupdesc,col-1)->attname);
         bool  is_null;
         Datum datum;
 
@@ -1492,7 +1492,7 @@ void pg_jsonapi::QueryBuilder::SerializeResource (StringInfoData& a_response, co
             } else {
                 appendStringInfo(&a_response, "%s\"%s\":", field_start, attname);
                 field_start = ",";
-                switch (res_tupdesc->attrs[col-1]->atttypid) {
+                switch (TupleDescAttr(res_tupdesc,col-1)->atttypid) {
 
                     case CHAROID:
                         appendStringInfo(&a_response, "%c", DatumGetChar(datum));
@@ -1525,7 +1525,7 @@ void pg_jsonapi::QueryBuilder::SerializeResource (StringInfoData& a_response, co
                         break;
                     default:
                         /* convert arrays using to_json */
-                        if ( 'A' == TypeCategory(res_tupdesc->attrs[col-1]->atttypid) ) {
+                        if ( 'A' == TypeCategory(TupleDescAttr(res_tupdesc,col-1)->atttypid) ) {
                             pg_jsonapi::array_to_json_internal(datum, &a_response, false);
                         } else {
                             escape_json(&a_response, SPI_getvalue(res_tuple, res_tupdesc, col));
@@ -1815,23 +1815,23 @@ bool pg_jsonapi::QueryBuilder::ProcessFunctionJsonResult(const std::string& a_ty
         return false;
     }
 
-    attname = NameStr(SPI_tuptable->tupdesc->attrs[0]->attname);
+    attname = NameStr(TupleDescAttr(SPI_tuptable->tupdesc,0)->attname);
     if ( strcmp(attname, "data") ) {
         AddError(JSONAPI_MAKE_SQLSTATE("JA016"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid query column '%s' returned for resource '%s'", attname, a_type.c_str());
         rv = false;
     }
-    if ( JSONOID != SPI_tuptable->tupdesc->attrs[0]->atttypid ) {
-        AddError(JSONAPI_MAKE_SQLSTATE("JA016"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "column '%s' returned unexpected type(%d) for resource '%s'", attname, SPI_tuptable->tupdesc->attrs[0]->atttypid, a_type.c_str());
+    if ( JSONOID != TupleDescAttr(SPI_tuptable->tupdesc,0)->atttypid ) {
+        AddError(JSONAPI_MAKE_SQLSTATE("JA016"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "column '%s' returned unexpected type(%d) for resource '%s'", attname, TupleDescAttr(SPI_tuptable->tupdesc,0)->atttypid, a_type.c_str());
         rv = false;
     }
 
-    attname = NameStr(SPI_tuptable->tupdesc->attrs[1]->attname);
+    attname = NameStr(TupleDescAttr(SPI_tuptable->tupdesc,1)->attname);
     if ( strcmp(attname, "included") ) {
         AddError(JSONAPI_MAKE_SQLSTATE("JA016"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid query column '%s' returned for resource '%s'", attname, a_type.c_str());
         rv = false;
     }
-    if ( JSONOID != SPI_tuptable->tupdesc->attrs[1]->atttypid ) {
-        AddError(JSONAPI_MAKE_SQLSTATE("JA016"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "column '%s' returned unexpected type(%d) for resource '%s'", attname, SPI_tuptable->tupdesc->attrs[1]->atttypid, a_type.c_str());
+    if ( JSONOID != TupleDescAttr(SPI_tuptable->tupdesc,1)->atttypid ) {
+        AddError(JSONAPI_MAKE_SQLSTATE("JA016"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "column '%s' returned unexpected type(%d) for resource '%s'", attname, TupleDescAttr(SPI_tuptable->tupdesc,1)->atttypid, a_type.c_str());
         rv = false;
     }
 

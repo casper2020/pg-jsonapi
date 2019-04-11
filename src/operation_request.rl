@@ -766,7 +766,7 @@ bool pg_jsonapi::OperationRequest::ProcessOperationResult ()
     }
 
     const char* id = SPI_getvalue(SPI_tuptable->vals[0], SPI_tuptable->tupdesc, 1);
-    const char* attname = NameStr(SPI_tuptable->tupdesc->attrs[0]->attname);
+    const char* attname = NameStr(TupleDescAttr(SPI_tuptable->tupdesc,0)->attname);
 
     if ( NULL == id ||  0 == strlen(id) ) {
         AddError(JSONAPI_MAKE_SQLSTATE("JA016"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "empty or NULL id was returned for resource '%s'",
@@ -793,7 +793,7 @@ bool pg_jsonapi::OperationRequest::ProcessOperationResult ()
 
 
     if ( rq_relationship_ ) {
-        const char* field = NameStr(SPI_tuptable->tupdesc->attrs[1]->attname);
+        const char* field = NameStr(TupleDescAttr(SPI_tuptable->tupdesc,1)->attname);
         if (   2 != SPI_tuptable->tupdesc->natts
             || strcmp(field, rq_related_.c_str()) ) {
             AddError(JSONAPI_MAKE_SQLSTATE("JA016"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid query column '%s' returned for resource '%s'",

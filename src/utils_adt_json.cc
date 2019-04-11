@@ -39,6 +39,7 @@ extern "C" {
 #include "utils/syscache.h"
 } // extern "C"
 
+
 /* String to output for infinite dates and timestamps */
 #define DT_INFINITY "\"infinity\""
 
@@ -172,14 +173,14 @@ pg_jsonapi::composite_to_json(Datum composite, StringInfo result, bool use_line_
         JsonTypeCategory tcategory;
         Oid			outfuncoid;
 
-        if (tupdesc->attrs[i]->attisdropped)
+        if (TupleDescAttr(tupdesc,i)->attisdropped)
             continue;
 
         if (needsep)
             appendStringInfoString(result, sep);
         needsep = true;
 
-        attname = NameStr(tupdesc->attrs[i]->attname);
+        attname = NameStr(TupleDescAttr(tupdesc,i)->attname);
         escape_json(result, attname);
         appendStringInfoChar(result, ':');
 
@@ -191,7 +192,7 @@ pg_jsonapi::composite_to_json(Datum composite, StringInfo result, bool use_line_
             outfuncoid = InvalidOid;
         }
         else
-            json_categorize_type(tupdesc->attrs[i]->atttypid,
+            json_categorize_type(TupleDescAttr(tupdesc,i)->atttypid,
                                  &tcategory, &outfuncoid);
 
         datum_to_json(val, isnull, result, tcategory, outfuncoid, false);
