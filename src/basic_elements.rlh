@@ -102,6 +102,12 @@
             start++;
         } else if ( '+' == *start ) {
             start++;
+        } else if ( '%' == *start ) {
+            start += 2; /* skip %2 */
+            if ( 'D' == *start ) {
+                order = "DESC";
+            }
+            start++;
         }
         field = pg_jsonapi::Utils::urlDecode(start, fpc - start);
         rq_sort_param_.push_back(std::make_pair(field, order));
@@ -183,7 +189,7 @@
     res_path  = res_type ('.' res_type)? ;
     inc_path  = (zlen res_type %save_include ('.' zlen res_type %save_include)* );
     field_list = ( (zlen >{ start = fpc;} res_type) (comma_char %save_field %{ start = fpc;} res_type)* %save_field )?;
-    sort_arg  = (zlen >{ start = fpc;} ('+' | '-')? res_type %save_sort );
+    sort_arg  = (zlen >{ start = fpc;} ('+' | "%2B" | '-' | "%2D" )? res_type %save_sort );
 
     # request
     base_url     = (zlen >{ start = fpc;} 'http' 's'?'://' [^/]+ ) %save_base_url;
