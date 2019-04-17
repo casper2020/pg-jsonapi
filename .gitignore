@@ -1,6 +1,7 @@
 .DS_Store
 build
 *.o
+*.bc
 operation_request.cc
 query_builder.cc
 pg-jsonapi*.so

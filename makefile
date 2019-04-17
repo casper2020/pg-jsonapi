@@ -43,6 +43,9 @@ OBJS=$(SRC_FILES:.cc=.o) $(RAGEL_FILES:.rl=.o)
 %.cc: %.rl
 	$(RAGEL) $< -G2 -o $@
 
+%.bc : %.cc
+	$(COMPILE.cxx.bc) $(CCFLAGS) $(CPPFLAGS) -fPIC -c -o $@ $<
+
 EXTENSION   := $(LIB_NAME)
 EXTVERSION  := $(LIB_VERSION)
 SHLIB_LINK  := -lstdc++ $(LINK_FLAGS)
