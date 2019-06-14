@@ -397,6 +397,8 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
     q_main_.company_column_.clear();
     q_main_.condition_.clear();
     q_main_.select_columns_.clear();
+    q_main_.job_ttr_ = 0;
+    q_main_.job_validity_ = 0;
 
     BoolOption bool_options[] = {
         {"request-accounting-schema",   &q_main_.use_rq_accounting_schema_},
@@ -409,6 +411,8 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
         {"show-null",                   &q_main_.show_null_}
     };
     UIntOption uint_options[] = {
+        {"job-ttr",                     &q_main_.job_ttr_},
+        {"job-validity",                &q_main_.job_validity_},
         {"page-size",                   &q_main_.page_size_}
     };
     StringOption str_options[] = {
@@ -471,11 +475,21 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
         }
     }
 
-    if ( a_config.isMember("job-methods") ) {
-        if ( q_main_.job_tube_.empty() ) {
+    if ( q_main_.job_tube_.empty() )  {
+        if ( q_main_.job_ttr_ > 0 ) {
+            g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid key 'resources[\"%s\"][\"job-ttr\"]', job requires specification of 'resources[\"%s\"][\"job-tube\"]' ", type_.c_str(), type_.c_str());
+            rv = false;
+        }
+        if ( q_main_.job_validity_ > 0 ) {
+            g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid key 'resources[\"%s\"][\"job-validity\"]', job requires specification of 'resources[\"%s\"][\"job-tube\"]' ", type_.c_str(), type_.c_str());
+            rv = false;
+        }
+        if ( a_config.isMember("job-methods") ) {
             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid key 'resources[\"%s\"][\"job-methods\"]', job requires specification of 'resources[\"%s\"][\"job-tube\"]' ", type_.c_str(), type_.c_str());
             rv = false;
-        } else if ( false == a_config["job-methods"].isArray() || a_config["job-methods"].empty() ) {
+        }
+    } else if ( a_config.isMember("job-methods") ) {
+        if ( false == a_config["job-methods"].isArray() || a_config["job-methods"].empty() ) {
             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid value for 'resources[\"%s\"][\"job-methods\"]', array is expected", type_.c_str());
             rv = false;
         } else {
@@ -494,6 +508,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
             }
         }
     }
+    
 
     if ( IsQueryFromFunction() ) {
         const char* incompatible_options[] = {"pg-table", "pg-attributes-function", "pg-order-by"};

@@ -117,6 +117,8 @@ namespace pg_jsonapi
             std::string      condition_;
             std::string      job_tube_;
             StringSet        job_methods_;
+            uint             job_ttr_;        // use zero as undefined
+            uint             job_validity_;   // use zero as undefined
             std::string      select_columns_;
             PGColumnsSpecMap columns_; // columns for fields on same table
             PGColumnsSpecMap casted_columns_; // columns for fields on same table applying specified cast
@@ -217,6 +219,8 @@ namespace pg_jsonapi
 
         bool                     HasJobTube                       (const std::string& a_method) const;
         const std::string&       GetJobTube                       () const;
+        size_t                   JobTtr                           () const;
+        size_t                   JobValidity                      () const;
 
         const PGRelationSpecMap& GetPGRelations                () const;
         const std::string&       GetPGRelationQuerySchema      (const std::string& a_field) const;
@@ -529,6 +533,17 @@ namespace pg_jsonapi
     inline const std::string& ResourceConfig::GetJobTube () const
     {
         return q_main_.job_tube_;
+    }
+
+
+    inline size_t ResourceConfig::JobTtr () const
+    {
+        return q_main_.job_ttr_;
+    }
+
+    inline size_t ResourceConfig::JobValidity () const
+    {
+        return q_main_.job_validity_;
     }
 
 } // namespace pg_jsonapi

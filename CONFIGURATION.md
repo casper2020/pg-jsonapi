@@ -177,3 +177,10 @@ The document must be processed by a job, not inside PostgreSQL
 
 The specified methods must be processed using the job specified in `job-tube`, by default all methods will be supported by the job
 
+### `job-ttr`
+
+Job time to run, number of seconds that job may be running, otherwise will be canceled with timeout, there is no default in jsonapi configuration.
+
+### `job-validity`
+
+Job validity in seconds, time to wait until it starts being processed, there is no default in jsonapi configuration.

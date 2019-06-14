@@ -1618,8 +1618,16 @@ void pg_jsonapi::QueryBuilder::SerializeResponse (StringInfoData& a_response)
         if ( q_errors_.size() ) {
             SerializeErrors(a_response);
         } else if ( IsTopQueryFromJobTube() ) {
+            size_t aux = 0;
             q_http_status_ = E_HTTP_ACCEPTED;
-            appendStringInfo(&a_response, "\"meta\":{\"job-tube\":\"%s\"}", GetTopJobTube().c_str() );
+            appendStringInfo(&a_response, "\"meta\":{\"job-tube\":\"%s\"", config_->GetResource(GetResourceType()).GetJobTube().c_str() );
+            if ( config_->GetResource(GetResourceType()).JobTtr() > 0 ) {
+                appendStringInfo(&a_response, ",\"job-ttr\":%zu", config_->GetResource(GetResourceType()).JobTtr() );
+            }
+            if ( config_->GetResource(GetResourceType()).JobValidity() > 0 ) {
+                appendStringInfo(&a_response, ",\"job-validity\":%zu", config_->GetResource(GetResourceType()).JobValidity() );
+            }
+            appendStringInfoChar(&a_response, '}');
         } else if ( "DELETE" == rq_method_ || (E_EXT_JSON_PATCH == rq_extension_ && E_OP_DELETE == rq_operations_[0].GetType() ) ) {
             rq_operations_[0].SerializeMeta(a_response, true);
         } else {

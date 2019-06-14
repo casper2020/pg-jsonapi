@@ -213,7 +213,6 @@ namespace pg_jsonapi
         const std::string&    GetFunctionArgUser()             const;
         const std::string&    GetFunctionArgCompany()          const;
         bool                  IsTopQueryFromJobTube()          const;
-        const std::string&    GetTopJobTube()                  const;
     };
 
     inline bool QueryBuilder::IsRequestedField (const std::string& a_type, const std::string& a_field) const
@@ -410,11 +409,6 @@ namespace pg_jsonapi
     inline bool QueryBuilder::IsTopQueryFromJobTube () const
     {
         return rq_resource_type_.length() && config_->GetResource(rq_resource_type_).HasJobTube(rq_method_);
-    }
-
-    inline const std::string& QueryBuilder::GetTopJobTube () const
-    {
-        return config_->GetResource(rq_resource_type_).GetJobTube();
     }
 
 } // namespace pg_jsonapi
