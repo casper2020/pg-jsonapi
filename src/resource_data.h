@@ -42,6 +42,7 @@ namespace pg_jsonapi
     {
     public:
         const char*     id_;
+        std::string     internal_id_;
         bool            serialized_;
         HeapTuple       res_tuple_;
         StringVectorMap relationships_;

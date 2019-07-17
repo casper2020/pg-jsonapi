@@ -746,8 +746,9 @@ bool pg_jsonapi::QueryBuilder::ProcessAttributes(const std::string& a_type, size
 {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s a_type:%s", __FUNCTION__, a_type.c_str())));
 
-    uint32_t      offset = 0;
-    bool   is_null;
+    uint32_t              offset = 0;
+    bool                  is_null;
+    const ResourceConfig& rc = config_->GetResource(a_type);
 
     if ( q_data_[a_type].processed_ ) {
         offset = q_data_[a_type].processed_;
@@ -789,12 +790,25 @@ bool pg_jsonapi::QueryBuilder::ProcessAttributes(const std::string& a_type, size
             }
         }
         if ( NULL == q_data_[a_type].items_[row].id_ || 0 ==strlen(q_data_[a_type].items_[row].id_) ) {
-            AddError(JSONAPI_MAKE_SQLSTATE("JA016"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "empty id for '%s'", a_type.c_str());
-            return false;
+            if ( rc.IdFromRowset() ) {
+                q_data_[a_type].items_[row].internal_id_ = std::to_string(row);
+                q_data_[a_type].items_[row].id_ = q_data_[a_type].items_[row].internal_id_.c_str();
+                if ( q_data_[a_type].processed_ids_.count(q_data_[a_type].items_[row].id_) ) {
+                    AddError(JSONAPI_MAKE_SQLSTATE("JA016"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "possible duplicate, id '%s' for '%s' was already returned",
+                               q_data_[a_type].items_[row].id_, a_type.c_str());
+                    return false;
+                }
+                q_data_[a_type].id_index_[q_data_[a_type].items_[row].id_] = row;
+                a_processed_ids->insert( q_data_[a_type].items_[row].id_ );
+                q_data_[a_type].processed_ids_.insert( q_data_[a_type].items_[row].id_ );
+            } else {
+                AddError(JSONAPI_MAKE_SQLSTATE("JA016"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "empty id for '%s'", a_type.c_str());
+                return false;
+            }
         }
         for (int col = 1; col <= q_data_[a_type].tupdesc_->natts; col++) {
             const char* attname = NameStr(TupleDescAttr(q_data_[a_type].tupdesc_,col-1)->attname);
-            if ( config_->GetResource(a_type).IsRelationship(attname) ) {
+            if ( rc.IsRelationship(attname) ) {
                 const char* rel_id = SPI_getvalue(q_data_[a_type].items_[row].res_tuple_, q_data_[a_type].tupdesc_, col);
                 if ( NULL != rel_id ) {
                     if ( 0 == strlen(rel_id) ) {

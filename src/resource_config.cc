@@ -39,6 +39,7 @@ pg_jsonapi::ResourceConfig::ResourceConfig (const DocumentConfig* a_parent_doc, 
     q_main_.table_                    = type_;
     q_main_.returns_json_             = false;
     q_main_.needs_search_path_        = false;
+    q_main_.id_from_rowset_           = false;
     q_main_.col_id_                   = "id";
     q_main_.company_column_.clear();
     q_main_.condition_.clear();
@@ -390,6 +391,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
     q_main_.table_ = type_;
     q_main_.order_by_ = parent_doc_->DefaultOrder();
     q_main_.needs_search_path_ = false;
+    q_main_.id_from_rowset_ = false;
     q_main_.page_size_ = parent_doc_->PageSize();
     q_main_.show_links_ = parent_doc_->ShowLinks();
     q_main_.show_null_ = parent_doc_->ShowNull();
@@ -407,6 +409,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
         {"request-accounting-prefix",   &q_main_.use_rq_accounting_prefix_},
         {"returns-json",                &q_main_.returns_json_},
         {"pg-set-search_path",          &q_main_.needs_search_path_},
+        {"id-from-rowset",              &q_main_.id_from_rowset_},
         {"show-links",                  &q_main_.show_links_},
         {"show-null",                   &q_main_.show_null_}
     };
@@ -526,7 +529,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
         }
         q_main_.table_.clear();
     } else {
-        const char* incompatible_options[] = {"returns-json", "request-accounting-schema-function-arg", "request-sharded-schema-function-arg", "request-company-schema-function-arg", "request-accounting-prefix-function-arg", "request-user-function-arg", "request-company-function-arg", "request-id-function-arg", "request-count-function-arg", "request-filter-function-arg", "request-offset-function-arg", "request-limit-function-arg"};
+        const char* incompatible_options[] = {"returns-json", "request-accounting-schema-function-arg", "request-sharded-schema-function-arg", "request-company-schema-function-arg", "request-accounting-prefix-function-arg", "request-user-function-arg", "request-company-function-arg", "request-id-function-arg", "request-count-function-arg", "request-filter-function-arg", "request-offset-function-arg", "request-limit-function-arg", "id-from-rowset"};
         for ( size_t i = 0; i < sizeof(incompatible_options)/sizeof(incompatible_options[0]); ++i ) {
             if ( !a_config[incompatible_options[i]].isNull() ) {
                 g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "conflicting keys 'resources[\"%s\"][\"pg-function\"]' and 'resources[\"%s\"][\"%s\"]'",

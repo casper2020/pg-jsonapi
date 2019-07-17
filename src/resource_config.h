@@ -108,6 +108,7 @@ namespace pg_jsonapi
             std::string      function_arg_rq_page_limit_;
             std::string      function_arg_rq_count_;
             std::string      function_arg_rq_filter_;
+            bool             id_from_rowset_;
             bool             needs_search_path_;
             uint             page_size_;
             bool             show_links_;
@@ -196,6 +197,7 @@ namespace pg_jsonapi
         const std::string&       GetPGQueryCompanyColumn          () const;
         const std::string&       GetPGQueryCondition              () const;
         const std::string&       GetPGQueryOrder                  () const;
+        bool                     IdFromRowset                     () const;
         size_t                   PageSize                         () const;
         bool                     ShowLinks                        () const;
         bool                     ShowNull                         () const;
@@ -306,6 +308,11 @@ namespace pg_jsonapi
     inline const std::string& ResourceConfig::GetPGQueryOrder () const
     {
         return q_main_.order_by_;
+    }
+
+    inline bool ResourceConfig::IdFromRowset () const
+    {
+        return q_main_.id_from_rowset_;
     }
 
     inline size_t ResourceConfig::PageSize () const
