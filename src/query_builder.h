@@ -226,17 +226,6 @@ namespace pg_jsonapi
         return;
     }
 
-    inline void QueryBuilder::RequestOperationResponseData (const std::string& a_type, const std::string& a_id)
-    {
-        if ( "GET" == GetRequestMethod() && IsIndividual() && GetResourceType() == a_type && GetResourceId() == a_id ) {
-            // top resource was included, we need to allow it to appear in 'included'
-            q_top_must_be_included_ = true;
-        } else {
-            q_to_be_included_[a_type].insert(a_id);
-        }
-        return;
-    }
-
     inline bool QueryBuilder::SPIIsConnected () const
     {
         return spi_connected_;

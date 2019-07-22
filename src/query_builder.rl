@@ -1632,7 +1632,6 @@ void pg_jsonapi::QueryBuilder::SerializeResponse (StringInfoData& a_response)
         if ( q_errors_.size() ) {
             SerializeErrors(a_response);
         } else if ( IsTopQueryFromJobTube() ) {
-            size_t aux = 0;
             q_http_status_ = E_HTTP_ACCEPTED;
             appendStringInfo(&a_response, "\"meta\":{\"job-tube\":\"%s\"", config_->GetResource(GetResourceType()).GetJobTube().c_str() );
             if ( config_->GetResource(GetResourceType()).JobTtr() > 0 ) {
@@ -1937,4 +1936,15 @@ const std::string& pg_jsonapi::QueryBuilder::GetFilterTableByFieldCondition (con
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s return:%s",
                                      __FUNCTION__, q_buffer_.c_str())));
     return q_buffer_;
+}
+
+void pg_jsonapi::QueryBuilder::RequestOperationResponseData (const std::string& a_type, const std::string& a_id)
+{
+    if ( "GET" == GetRequestMethod() && IsIndividual() && GetResourceType() == a_type && GetResourceId() == a_id ) {
+        // top resource was included, we need to allow it to appear in 'included'
+        q_top_must_be_included_ = true;
+    } else {
+        q_to_be_included_[a_type].insert(a_id);
+    }
+    return;
 }
