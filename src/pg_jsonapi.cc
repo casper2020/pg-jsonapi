@@ -209,6 +209,7 @@ jsonapi(PG_FUNCTION_ARGS)
 
     /* disconnect from SPI manager only after serialization because of memory context and HTTP status */
     g_qb->SPIDisconnect();
+    g_qb->Clear();
 
     PG_RETURN_DATUM(HeapTupleGetDatum(heap_form_tuple(tupdesc, values, nulls)));
 }

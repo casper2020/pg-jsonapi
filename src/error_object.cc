@@ -35,8 +35,6 @@ pg_jsonapi::ErrorObject::ErrorObject ( int a_sqlerrcode, HttpStatusErrorCode a_s
      */
     source_param_[0] = '\0';
     internal_[0] = '\0';
-
-    detail_ = detail_;
 }
 
 /**

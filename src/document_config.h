@@ -70,7 +70,7 @@ namespace pg_jsonapi
         DocumentConfig (const std::string a_base_url);
         virtual ~DocumentConfig ();
 
-        bool LoadConfigFromDB();
+        bool LoadConfigFromDB(bool& o_config_exists);
 
         static bool DefaultHasVersion ();
         static bool DefaultIsCompound ();
@@ -104,11 +104,9 @@ namespace pg_jsonapi
         bool IsIdentifier       (const std::string& a_name) const;
         bool IsValidField       (const std::string& a_type, const std::string& a_field) const;
 
-        const std::string&    GetBaseURL  () const;
         const ResourceConfig& GetResource (const std::string& a_type) const;
 
         const std::string&    ConfigQuery ();
-        const std::string&    DefaultConfigQuery ();
     };
 
     typedef std::map<std::string, DocumentConfig> DocumentConfigMap;
@@ -261,11 +259,6 @@ namespace pg_jsonapi
         }
     }
 
-    inline const std::string& DocumentConfig::GetBaseURL () const
-    {
-        return base_url_;
-    }
-
     inline const ResourceConfig& DocumentConfig::GetResource (const std::string& a_type) const
     {
         return resources_.at(a_type);
@@ -277,14 +270,6 @@ namespace pg_jsonapi
             query_config_ = "SELECT config FROM public.jsonapi_config WHERE prefix = '" + base_url_ + "'";
         }
         return query_config_;
-    }
-
-    inline const std::string& DocumentConfig::DefaultConfigQuery ()
-    {
-        if ( 0 == query_default_config_.size() ) {
-            query_default_config_ = "SELECT config FROM public.jsonapi_config WHERE prefix = 'default'";
-        }
-        return query_default_config_;
     }
 
     inline pg_jsonapi::ResourceConfig* pg_jsonapi::DocumentConfig::Resource (const std::string& a_type)

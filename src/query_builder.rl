@@ -260,12 +260,12 @@ bool pg_jsonapi::QueryBuilder::ParseUrl ()
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
 
     int   cs;
-    char* p     = (char*)rq_url_encoded_.c_str();
-    char* pe    = p + rq_url_encoded_.length();
-    char* eof   = pe;
-    char* start = NULL;
-    char* key_s = NULL;
-    char* key_e = NULL;
+    const char* p     = rq_url_encoded_.c_str();
+    const char* pe    = p + rq_url_encoded_.length();
+    const char* eof   = pe;
+    const char* start = NULL;
+    const char* key_s = NULL;
+    const char* key_e = NULL;
 
     bool        has_include = false;
     std::string type;
@@ -430,12 +430,28 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
 
     std::map<std::string, pg_jsonapi::DocumentConfig>::iterator it = config_map_.find(rq_base_url_);
     if ( config_map_.end() == it  ) {
+        bool config_exists = false;
         /* get configuration from DB and keep it for later use */
-        config_map_.insert( std::pair<std::string, pg_jsonapi::DocumentConfig>( rq_base_url_, DocumentConfig(rq_base_url_)) );
-        it = config_map_.find(rq_base_url_);
-        if ( ! it->second.LoadConfigFromDB() ) {
-            /* lets reload configuration later */
-            config_map_.erase(it);
+        if ( requested_urls_.end() == requested_urls_.find(rq_base_url_) ) {
+            requested_urls_.insert(rq_base_url_);
+            config_map_.insert(std::pair<std::string, pg_jsonapi::DocumentConfig>(rq_base_url_, DocumentConfig(rq_base_url_)));
+            it = config_map_.find(rq_base_url_);
+            if ( false == it->second.LoadConfigFromDB(config_exists) ) {
+                config_map_.erase(it);
+                it = config_map_.end();
+            }
+        }
+        if ( config_map_.end() == it && ! config_exists ) {
+            it = config_map_.find("default");
+            if ( config_map_.end() == it  ) {
+                config_map_.insert(std::pair<std::string, pg_jsonapi::DocumentConfig>("default", DocumentConfig("default")));
+                it = config_map_.find("default");
+                if ( ! it->second.LoadConfigFromDB(config_exists) ) {
+                    config_map_.erase(it);
+                    return false;
+                }
+            }
+        } else {
             return false;
         }
     }
@@ -952,7 +968,6 @@ bool pg_jsonapi::QueryBuilder::SPIDisconnect() {
             return false;
         }
     }
-    Clear();
     return true;
 }
 
@@ -986,10 +1001,6 @@ bool pg_jsonapi::QueryBuilder::SPIExecuteCommand (const std::string& a_command, 
     {
         MemoryContextSwitchTo( curContext );
         ErrorData *errdata = CopyErrorData();
-        FlushErrorState();
-        SPI_finish();
-        SPI_restore_connection();
-
         if ( JSONAPI_ERRCODE_CATEGORY == ERRCODE_TO_CATEGORY(errdata->sqlerrcode) )
         {
             // if JSONAPI error code category is being used, we can trust that message must be sent to user
@@ -999,8 +1010,12 @@ bool pg_jsonapi::QueryBuilder::SPIExecuteCommand (const std::string& a_command, 
             ErrorCode::ErrorCodeDetail ecd = errcodes_.GetDetail(errdata->sqlerrcode);
             AddError(errdata->sqlerrcode, ecd.status_).SetMessage(ecd.message_, "ERROR:[ %s ] DETAIL:[ %s ] HINT:[ %s ] CONTEXT:[ %s ]", errdata->message,  errdata->detail,  errdata->hint,  errdata->context);
         }
-
         FreeErrorData(errdata);
+
+        FlushErrorState();
+        SPIDisconnect();
+        SPI_restore_connection();
+
         rv = false;
     }
     PG_END_TRY();

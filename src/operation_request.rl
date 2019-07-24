@@ -120,10 +120,10 @@ bool pg_jsonapi::OperationRequest::ParsePath (std::string a_patch_path)
     } else if ( ! a_patch_path.empty() ) {
         std::string full_path = g_qb->GetRequestUrl().c_str()+g_qb->GetRequestBaseUrl().length() + a_patch_path;
         int   cs;
-        char* p     = (char*)full_path.c_str();
-        char* pe    = p + full_path.length();
-        char* eof   = pe;
-        char* start = NULL;
+        const char* p     = full_path.c_str();
+        const char* pe    = p + full_path.length();
+        const char* eof   = pe;
+        const char* start = NULL;
 
         %%{
             machine OperationPath;

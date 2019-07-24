@@ -61,8 +61,9 @@ namespace pg_jsonapi
         ErrorCode       errcodes_;
 
     private: // Resource Specification - initialized only once by base_url
-        DocumentConfigMap config_map_;
-        DocumentConfig*   config_;      // specification for current request
+        DocumentConfigMap   config_map_;
+        DocumentConfig*     config_;      // specification for current request
+        StringSet           requested_urls_;
 
     private: // Attributes - request variables filled while parsing request
 
@@ -182,7 +183,7 @@ namespace pg_jsonapi
         size_t                ErrorsSize()                  const;
         const ErrorObject&    GetError(size_t a_index)      const;
         HttpStatusCode        GetHttpStatus ()              const;
-        DocumentConfig*       GetDocumentConfig()           const;
+        const DocumentConfig* GetDocumentConfig()           const;
         bool                  NeedsSearchPath()             const;
 
         const std::string&    GetRequestUrl()                  const;
@@ -255,7 +256,7 @@ namespace pg_jsonapi
         return q_needs_search_path_;
     }
 
-    inline pg_jsonapi::DocumentConfig* QueryBuilder::GetDocumentConfig () const
+    inline const pg_jsonapi::DocumentConfig* QueryBuilder::GetDocumentConfig () const
     {
         return config_;
     }
