@@ -36,6 +36,7 @@ ifeq ($(shell uname -s),Darwin)
   CFLAGS += -Wbad-function-cast -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs -Wcast-qual -Wredundant-decls -Wno-deprecated-register
   CLANG_CXX_LANGUAGE_STANDARD = c++11
 else
+  CFLAGS += -DENABLE_NLS=1
   CXXFLAGS += -std=c++11
 endif
 
