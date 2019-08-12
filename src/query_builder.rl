@@ -1098,7 +1098,7 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
                     q_buffer_ += condition_start + rc.GetPGFunctionArgFilter() + condition_operator;
                     OperationRequest::AddQuotedStringToBuffer(q_buffer_, rq_filter_param_.c_str(), true);
                 } else {
-                    q_buffer_ += condition_start + rq_filter_param_;
+                    q_buffer_ += condition_start + "(" + rq_filter_param_ + ")";
                 }
             }
             condition_start = condition_separator;
