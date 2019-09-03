@@ -1139,15 +1139,26 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
     }
 
     if ( false == a_count_rows && IsCollection() ) {
-        if ( !rc.IsQueryFromFunction() ) {
+        if ( !rc.IsQueryFromFunction() || rc.FunctionSupportsOrder() ) {
+            std::string sort_start = "";
+            if ( rc.IsQueryFromFunction() ) {
+                sort_start = condition_start + rc.GetPGFunctionArgOrder() + condition_operator + "'ORDER BY ";
+            } else {
+                sort_start = " ORDER BY ";
+            }
             if ( ! rq_sort_param_.empty() ) {
-                std::string sort_start = " ORDER BY ";
                 for ( std::vector< std::pair <std::string,std::string> >::iterator res = rq_sort_param_.begin(); res != rq_sort_param_.end(); ++res ) {
                     q_buffer_ += sort_start + rc.GetPGQueryCastedColumn(std::get<0>(*res)) + " " + std::get<1>(*res);
                     sort_start = ",";
                 }
+                if ( rc.IsQueryFromFunction() ) {
+                    condition_start = "'" + condition_separator;
+                }
             } else if ( ! rc.GetPGQueryOrder().empty() ) {
-                q_buffer_ += " ORDER BY " + rc.GetPGQueryOrder();
+                q_buffer_ += sort_start + rc.GetPGQueryOrder();
+                if ( rc.IsQueryFromFunction() ) {
+                    condition_start = "'" + condition_separator;
+                }
             }
         }
 

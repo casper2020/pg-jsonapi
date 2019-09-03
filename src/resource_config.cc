@@ -436,6 +436,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
         {"request-company-function-arg",            &q_main_.function_arg_rq_company_},
         {"request-id-function-arg",                 &q_main_.function_arg_rq_col_id_},
         {"request-count-function-arg",              &q_main_.function_arg_rq_count_},
+        {"request-order-function-arg",              &q_main_.function_arg_rq_order_},
         {"request-filter-function-arg",             &q_main_.function_arg_rq_filter_},
         {"request-offset-function-arg",             &q_main_.function_arg_rq_page_offset_},
         {"request-limit-function-arg",              &q_main_.function_arg_rq_page_limit_}
@@ -514,7 +515,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
     
 
     if ( IsQueryFromFunction() ) {
-        const char* incompatible_options[] = {"pg-table", "pg-attributes-function", "pg-order-by"};
+        const char* incompatible_options[] = {"pg-table", "pg-attributes-function"};
         for ( size_t i = 0; i < sizeof(incompatible_options)/sizeof(incompatible_options[0]); ++i ) {
             if ( !a_config[incompatible_options[i]].isNull() ) {
                 g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "conflicting key 'resources[\"%s\"][\"%s\"]' may only be used with 'resources[\"%s\"][\"pg-function\"]'",
