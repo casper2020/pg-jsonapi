@@ -553,6 +553,7 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
                 e.SetSourceParam("filter[%s]=%s", GetFunctionArgCompany().c_str(), rq_filter_field_param_[GetFunctionArgCompany()].c_str());
             }
             if ( 1 == rq_totals_param_ && !TopFunctionSupportsCounts() ) {
+                rq_totals_param_ = 0;
                 ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "resource '%s' is configured as a call to function '%s' which does not support totals",
                                                                                                          GetResourceType().c_str(), config_->GetResource(GetResourceType()).GetPGQueryFunction().c_str() );
                 e.SetSourceParam("totals=1");
@@ -1670,7 +1671,7 @@ void pg_jsonapi::QueryBuilder::SerializeResponse (StringInfoData& a_response)
         } else if ( "DELETE" == rq_method_ || (E_EXT_JSON_PATCH == rq_extension_ && E_OP_DELETE == rq_operations_[0].GetType() ) ) {
             rq_operations_[0].SerializeMeta(a_response, true);
         } else {
-            if ( rq_operations_.size() && rq_operations_[0].SerializeMeta(a_response, false) && 0 == q_top_grand_total_rows_ ) {
+            if ( rq_operations_.size() && rq_operations_[0].SerializeMeta(a_response, false) && 1 != rq_totals_param_ ) {
                 appendStringInfoChar(&a_response, ',');
             }
             appendStringInfo(&a_response, "\"data\":");
@@ -1688,7 +1689,7 @@ void pg_jsonapi::QueryBuilder::SerializeResponse (StringInfoData& a_response)
                 } else {
                     SerializeFetchData(a_response);
                 }
-                if ( q_top_grand_total_rows_ ) {
+                if ( 1 == rq_totals_param_ ) {
                     appendStringInfo(&a_response, ",\"meta\":{");
                     if ( rq_operations_.size() && rq_operations_[0].SerializeObservedInMeta(a_response) ) {
                         appendStringInfoChar(&a_response, ',');
