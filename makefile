@@ -28,6 +28,9 @@ endif
 ifneq (Darwin,$(shell uname -s))
   SO_NAME = $(LIB_NAME).so.$(LIB_VERSION)
   LINK_FLAGS += -Wl,-soname,$(SO_NAME) -Wl,-z,relro -Bsymbolic
+else
+  PG_CONFIG ?= /Applications/casper.app/Contents/MacOS/postgresql/bin/pg_config
+  #PG_CONFIG = /usr/local/casper/postgresql/bin/pg_config
 endif
 $(shell sed -e s#@VERSION@#${LIB_VERSION}#g pg-jsonapi.control.tpl > pg-jsonapi.control)
 

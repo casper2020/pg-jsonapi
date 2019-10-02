@@ -109,7 +109,9 @@
             }
             start++;
         }
-        if ( ',' == *(fpc-1) ) {
+        if ( 0 == strncmp((fpc-3), "%2C", 3) ) {
+            field = pg_jsonapi::Utils::urlDecode(start, (fpc - start) - 3);
+        } else if ( ',' == *(fpc-1) ) {
             field = pg_jsonapi::Utils::urlDecode(start, (fpc - start) - 1);
         } else {
             field = pg_jsonapi::Utils::urlDecode(start, fpc - start);
