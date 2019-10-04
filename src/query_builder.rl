@@ -952,19 +952,24 @@ bool pg_jsonapi::QueryBuilder::SPIConnect() {
 bool pg_jsonapi::QueryBuilder::SPIDisconnect() {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
 
+    int expected_ret = SPI_OK_FINISH;
+
     if ( spi_connected_ ) {
 
         if ( ! spi_read_only_ && ! HasErrors() ) {
             ReleaseCurrentSubTransaction();
             ereport(DEBUG3, (errmsg_internal("jsonapi: released current subtransaction")));
         } else {
+#if (PG_VERSION_NUM < 110000)
+            expected_ret = ! HasErrors() ? SPI_OK_FINISH : SPI_ERROR_UNCONNECTED;
+#endif
             RollbackAndReleaseCurrentSubTransaction();
             ereport(DEBUG3, (errmsg_internal("jsonapi: rolled back and released current subtransaction")));
         }
 
         int ret = SPI_finish();
         spi_connected_ = false;
-        if ( SPI_OK_FINISH != ret ) {
+        if ( expected_ret != ret ) {
             ereport(LOG, (errmsg_internal("jsonapi: SPI_finish failed: %s", SPI_result_code_string(ret))));
             return false;
         }
