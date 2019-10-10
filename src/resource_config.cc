@@ -539,7 +539,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
         }
     }
 
-    if ( q_main_.use_rq_accounting_schema_ || q_main_.use_rq_sharded_schema_ || q_main_.use_rq_sharded_schema_ ) {
+    if ( q_main_.use_rq_accounting_schema_ || q_main_.use_rq_sharded_schema_ || q_main_.use_rq_company_schema_ ) {
         int count = 0;
         if ( q_main_.schema_.length() ) {
             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "incompatible configuration of 'resources[\"%s\"][\"pg-schema\"]',"
@@ -554,8 +554,11 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
                                                                                                     " \"request-accounting-schema\", \"request-sharded-schema\" and \"request-company-schema\" cannot be true simultaneously",
                                                                                                     type_.c_str());
         }
+    } else if ( q_main_.job_tube_.empty() && 0 == q_main_.schema_.length() ) {
+        g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "incompatible configuration of 'resources[\"%s\"][\"pg-schema\"]',"
+                                                                                                " \"pg-schema\" should be defined because \"request-accounting-schema\", \"request-sharded-schema\" and \"request-company-schema\" are false",
+                                                                                                type_.c_str());
     }
-
     if ( a_config.isMember("attributes") ) {
         if ( ! a_config["attributes"].isArray() ) {
             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid value for 'resources[\"%s\"][\"attributes\"]', array is expected", type_.c_str());
@@ -629,14 +632,11 @@ Oid pg_jsonapi::ResourceConfig::GetRelid(std::string a_type, std::string a_relna
             }
         }
     } else {
-        g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "resource '%s': schema was not provided", a_type.c_str() );
-        /*
         relid = RelnameGetRelid( a_relname.c_str() );
         if ( ! OidIsValid(relid) ) {
             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "resource '%s': relation %s does not exist", a_type.c_str(), a_relname.c_str() );
             return InvalidOid;
         }
-        */
     }
 
     return relid;
