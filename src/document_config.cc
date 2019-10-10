@@ -107,13 +107,11 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB (bool& o_config_exists)
         g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "too many rows (%d) returned for '%s' statement: %s",
 																							   (int)SPI_processed, base_url_.c_str(), ConfigQuery().c_str());
         rv = false;
-    }
-    if ( 0 == SPI_processed ) {
-        ereport(DEBUG1, (errmsg_internal("jsonapi: no specific configuration for prefix '%s' statement: %s",
+    } else if ( 0 == SPI_processed ) {
+        ereport(LOG, (errmsg_internal("jsonapi: no specific configuration for prefix '%s' statement: %s",
                                       base_url_.c_str(), ConfigQuery().c_str() )));
-        return false;
-    }
-    if ( 1 == SPI_processed ) {
+        rv = true;
+    } else if ( 1 == SPI_processed ) {
         char* config_s = SPI_getvalue(SPI_tuptable->vals[0], SPI_tuptable->tupdesc, 1);
 
         o_config_exists = true;
@@ -214,21 +212,26 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB (bool& o_config_exists)
                         }
                     }
                 }
+                if ( rv ) {
+                    ereport(LOG, (errmsg_internal("jsonapi: success loading configuration for prefix '%s'", base_url_.c_str() )));
+                }
             }
         }
 
         if ( config_s ) {
             pfree(config_s);
         }
+
+
     }
 
     /* clean up memory */
     SPI_freetuptable(SPI_tuptable);
-    SPI_processed = 0;
 
     if ( rv ) {
         rv = Validate();
     }
+
     return rv;
 }
 

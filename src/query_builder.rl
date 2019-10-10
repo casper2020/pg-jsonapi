@@ -436,13 +436,13 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
             requested_urls_.insert(rq_base_url_);
             config_map_.insert(std::pair<std::string, pg_jsonapi::DocumentConfig>(rq_base_url_, DocumentConfig(rq_base_url_)));
             it = config_map_.find(rq_base_url_);
-            if ( false == it->second.LoadConfigFromDB(config_exists) ) {
+            it->second.LoadConfigFromDB(config_exists);
+            if ( ! config_exists ) {
                 config_map_.erase(it);
                 it = config_map_.end();
             }
         }
         if ( config_map_.end() == it && ! config_exists ) {
-
             it = config_map_.find("default");
             if ( config_map_.end() == it  ) {
                 config_map_.insert(std::pair<std::string, pg_jsonapi::DocumentConfig>("default", DocumentConfig("default")));
@@ -452,10 +452,6 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
                     it = config_map_.end();
                 }
             }
-        }
-        if ( config_map_.end() == it ) {
-            AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "no configuration available for '%s'", rq_base_url_.c_str());
-            return false;
         }
     }
     config_ = &(it->second);
