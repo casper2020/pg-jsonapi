@@ -442,16 +442,19 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
             }
         }
         if ( config_map_.end() == it && ! config_exists ) {
+
             it = config_map_.find("default");
             if ( config_map_.end() == it  ) {
                 config_map_.insert(std::pair<std::string, pg_jsonapi::DocumentConfig>("default", DocumentConfig("default")));
                 it = config_map_.find("default");
-                if ( ! it->second.LoadConfigFromDB(config_exists) ) {
+                if ( false == it->second.LoadConfigFromDB(config_exists) ) {
                     config_map_.erase(it);
-                    return false;
+                    it = config_map_.end();
                 }
             }
-        } else {
+        }
+        if ( config_map_.end() == it ) {
+            AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "no configuration available for '%s'", rq_base_url_.c_str());
             return false;
         }
     }
@@ -952,24 +955,19 @@ bool pg_jsonapi::QueryBuilder::SPIConnect() {
 bool pg_jsonapi::QueryBuilder::SPIDisconnect() {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
 
-    int expected_ret = SPI_OK_FINISH;
-
     if ( spi_connected_ ) {
 
         if ( ! spi_read_only_ && ! HasErrors() ) {
             ReleaseCurrentSubTransaction();
             ereport(DEBUG3, (errmsg_internal("jsonapi: released current subtransaction")));
         } else {
-#if (PG_VERSION_NUM < 110000)
-            expected_ret = ! HasErrors() ? SPI_OK_FINISH : SPI_ERROR_UNCONNECTED;
-#endif
             RollbackAndReleaseCurrentSubTransaction();
             ereport(DEBUG3, (errmsg_internal("jsonapi: rolled back and released current subtransaction")));
         }
 
         int ret = SPI_finish();
         spi_connected_ = false;
-        if ( expected_ret != ret ) {
+        if ( SPI_OK_FINISH != ret && SPI_ERROR_UNCONNECTED != ret ) {
             ereport(LOG, (errmsg_internal("jsonapi: SPI_finish failed: %s", SPI_result_code_string(ret))));
             return false;
         }
@@ -1714,7 +1712,7 @@ void pg_jsonapi::QueryBuilder::SerializeResponse (StringInfoData& a_response)
         }
         if (   (  config_ && config_->HasVersion() )
             || ( !config_ && DocumentConfig::DefaultHasVersion() ) ) {
-            appendStringInfoString(&a_response, ",\"jsonapi\":{\"version\": \"1.0\"}");
+            appendStringInfo(&a_response, ",\"jsonapi\":{\"version\": \"1.0\",\"meta\":{\"libversion\":\"%s\"}}", LIB_VERSION);
         }
         appendStringInfoChar(&a_response, '}');
     } else if ( E_EXT_JSON_PATCH == rq_extension_ ) {

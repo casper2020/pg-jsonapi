@@ -19,12 +19,13 @@
 
 .PHONY: debug
 
-include settings.mk
-
 LIB_NAME:= pg-jsonapi
 ifndef LIB_VERSION
-	LIB_VERSION := "0.0.00"
+	LIB_VERSION := $(shell cat Version)
 endif
+
+include settings.mk
+
 ifneq (Darwin,$(shell uname -s))
   SO_NAME = $(LIB_NAME).so.$(LIB_VERSION)
   LINK_FLAGS += -Wl,-soname,$(SO_NAME) -Wl,-z,relro -Bsymbolic
