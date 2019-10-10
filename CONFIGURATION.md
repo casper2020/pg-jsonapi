@@ -54,7 +54,7 @@ Boolean value to define if empty values should be considered null for relationsh
 Empty values returned for relationships will be considered an error if this option is set to `false`, and will be ignored if set to `true`.
 Default is `false`.
 
-### `request-schema`
+### `request-accounting-schema`
 
 Boolean value to define if the schema sent as function second argument should be considered by default for each resource.
 Default is `true`.
@@ -72,14 +72,14 @@ This global flag is used as default for all resources, but may be overridden for
 Boolean value to define if the schema sent as function fourth argument should be considered by default for each resource.
 Default is `false`.
 This global flag is used as default for all resources, but may be overridden for each resource.
-If true, `request-schema` and `request-company-schema` cannot be provided.
+If true, `request-accounting-schema` and `request-company-schema` cannot be provided.
 
 ### `request-company-schema`
 
 Boolean value to define if the schema sent as function fifth argument should be considered by default for each resource.
 Default is `false`.
 This global flag is used as default for all resources, but may be overridden for each resource.
-If true, `request-schema` and `request-sharded-schema` cannot be provided.
+If true, `request-accounting-schema` and `request-sharded-schema` cannot be provided.
 
 ### `pg-order-by`
 
@@ -91,7 +91,7 @@ This global flag is used as default for all resources, but may be overridden for
 
 String containing search_path 'template' to be used in jsonapi function calls.
 This must be provided as it would be used on postgres configuration (https://www.postgresql.org/docs/current/static/config-setting.html).
-If string contains 'request-schema' or 'request-sharded-schema' or 'request-compay-schema' then these keywords will be replaced by function arguments to obtain the search_path to be set.
+If string contains 'request-accounting-schema' or 'request-sharded-schema' or 'request-company-schema' then these keywords will be replaced by function arguments to obtain the search_path to be set.
 If defined (and not empty), search_path will be changed and reset to previous value before exiting jsonapi function.
 This is a global setting, but is only set if needed in current request.
 
@@ -112,9 +112,9 @@ When there are observed resources, the resource object on the response document 
 ### `pg-schema`
 
 Name of the schema to be used.
-If not present, and `request-schema` is true than schema argument is used, otherwise if `request-sharded-schema` is true than sharded_schema argument is used, otherwise if `request-company-schema` is true than company_schema argument is used.
+If not present, and `request-accounting-schema` is true than schema argument is used, otherwise if `request-sharded-schema` is true than sharded_schema argument is used, otherwise if `request-company-schema` is true than company_schema argument is used.
 
-### `request-schema`
+### `request-accounting-schema`
 
 Defines behavior of schema usage for the resource, overriding global option value.
 If true, the `pg-schema`, `request-sharded-schema` and `request-company-schema` cannot be provided.
@@ -122,12 +122,12 @@ If true, the `pg-schema`, `request-sharded-schema` and `request-company-schema` 
 ### `request-sharded-schema`
 
 Defines behavior of schema usage for the resource, overriding global option value.
-If true, the `pg-schema`, `request-schema` and `request-company-schema` cannot be provided.
+If true, the `pg-schema`, `request-accounting-schema` and `request-company-schema` cannot be provided.
 
 ### `request-company-schema`
 
 Defines behavior of schema usage for the resource, overriding global option value.
-If true, the `pg-schema`, `request-schema` and `request-sharded-schema` cannot be provided.
+If true, the `pg-schema`, `request-accounting-schema` and `request-sharded-schema` cannot be provided.
 
 ### `pg-table`
 
