@@ -1138,7 +1138,7 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
         q_required_count_ = 0;
     }
 
-    if ( false == a_count_rows && IsCollection() ) {
+    if ( ( false == a_count_rows && IsCollection() ) || ( TopFunctionReturnsJson() && rc.FunctionSupportsOrder() ) ) {
         if ( !rc.IsQueryFromFunction() || rc.FunctionSupportsOrder() ) {
             std::string sort_start = "";
             if ( rc.IsQueryFromFunction() ) {
@@ -1152,12 +1152,14 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
                     sort_start = ",";
                 }
                 if ( rc.IsQueryFromFunction() ) {
-                    condition_start = "'" + condition_separator;
+                    q_buffer_ += "'";
+                    condition_start = condition_separator;
                 }
             } else if ( ! rc.GetPGQueryOrder().empty() ) {
                 q_buffer_ += sort_start + rc.GetPGQueryOrder();
                 if ( rc.IsQueryFromFunction() ) {
-                    condition_start = "'" + condition_separator;
+                    q_buffer_ += "'";
+                    condition_start = condition_separator;
                 }
             }
         }
