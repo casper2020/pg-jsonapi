@@ -1375,7 +1375,7 @@ bool pg_jsonapi::QueryBuilder::FetchData()
             }
         }
     }
-    if ( IsTopQueryFromFunction() ) {
+    if ( IsTopQueryFromFunction() && !TopFunctionSupportsFilter() ) {
         spi_read_only_ = false;
     }
 
