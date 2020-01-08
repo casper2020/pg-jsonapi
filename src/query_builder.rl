@@ -1523,6 +1523,7 @@ void pg_jsonapi::QueryBuilder::SerializeResource (StringInfoData& a_response, co
         const char* attname = NameStr(TupleDescAttr(res_tupdesc,col-1)->attname);
         bool  is_null;
         Datum datum;
+        TYPCATEGORY attcat = TYPCATEGORY_UNKNOWN;
 
         ereport(DEBUG4, (errmsg_internal("jsonapi: %s resource:%s attname:%s type:%s oid:%d category:%c", __FUNCTION__, a_type.c_str(), attname, SPI_gettype(res_tupdesc,col), TupleDescAttr(res_tupdesc,col-1)->atttypid, TypeCategory(TupleDescAttr(res_tupdesc,col-1)->atttypid) )));
         if ( config_->GetResource(a_type).IsValidAttribute(attname) && IsRequestedField(a_type, attname) ) {
@@ -1540,36 +1541,51 @@ void pg_jsonapi::QueryBuilder::SerializeResource (StringInfoData& a_response, co
                     case CHAROID:
                         appendStringInfo(&a_response, "%c", DatumGetChar(datum));
                         break;
+
                     case VARCHAROID:
                     case TEXTOID:
+                    case DATEOID:
+                    case TIMESTAMPOID:
+                    case TIMESTAMPTZOID:
+                    // case XMLOID:
                         escape_json(&a_response, SPI_getvalue(res_tuple, res_tupdesc, col));
                         break;
 
                     case INT2OID:
                         appendStringInfo(&a_response, "%hd", DatumGetInt16(datum));
                         break;
+
                     case INT4OID:
                         appendStringInfo(&a_response, "%d", DatumGetInt32(datum));
                         break;
+
                     case INT8OID:
                         appendStringInfo(&a_response, "%ld", DatumGetInt64(datum));
                         break;
+
                     case FLOAT4OID:
                         appendStringInfo(&a_response, "%f", DatumGetFloat4(datum));
                         break;
+
                     case FLOAT8OID:
                         appendStringInfo(&a_response, "%lf", DatumGetFloat8(datum));
                         break;
+
                     case BOOLOID:
                         appendStringInfo(&a_response, "%s", DatumGetFloat8(datum) ? "true" : "false");
                         break;
                     case NUMERICOID:
                         appendStringInfo(&a_response, "%s", SPI_getvalue(res_tuple, res_tupdesc, col));
                         break;
+
                     default:
-                        /* convert arrays using to_json */
-                        if ( 'A' == TypeCategory(TupleDescAttr(res_tupdesc,col-1)->atttypid) ) {
+                        attcat = TypeCategory(TupleDescAttr(res_tupdesc,col-1)->atttypid);
+                        if ( TYPCATEGORY_ARRAY == attcat ) {
+                            /* convert arrays using to_json */
                             pg_jsonapi::array_to_json_internal(datum, &a_response, false);
+                        } else if ( TYPCATEGORY_ENUM == attcat ) {
+                            /* convert enumerations as text */
+                            escape_json(&a_response, SPI_getvalue(res_tuple, res_tupdesc, col));
                         } else {
                             ereport(WARNING, (errmsg_internal("jsonapi: %s resource:%s attname:%s type:%s oid:%d category:%c", __FUNCTION__, a_type.c_str(), attname, SPI_gettype(res_tupdesc,col), TupleDescAttr(res_tupdesc,col-1)->atttypid, TypeCategory(TupleDescAttr(res_tupdesc,col-1)->atttypid) )));
                             escape_json(&a_response, SPI_getvalue(res_tuple, res_tupdesc, col));
