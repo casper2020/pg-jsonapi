@@ -1524,6 +1524,7 @@ void pg_jsonapi::QueryBuilder::SerializeResource (StringInfoData& a_response, co
         bool  is_null;
         Datum datum;
 
+        ereport(DEBUG4, (errmsg_internal("jsonapi: %s resource:%s attname:%s type:%s oid:%d category:%c", __FUNCTION__, a_type.c_str(), attname, SPI_gettype(res_tupdesc,col), TupleDescAttr(res_tupdesc,col-1)->atttypid, TypeCategory(TupleDescAttr(res_tupdesc,col-1)->atttypid) )));
         if ( config_->GetResource(a_type).IsValidAttribute(attname) && IsRequestedField(a_type, attname) ) {
             datum = SPI_getbinval(res_tuple, res_tupdesc, col, &is_null);
             if ( is_null ) {
@@ -1570,6 +1571,7 @@ void pg_jsonapi::QueryBuilder::SerializeResource (StringInfoData& a_response, co
                         if ( 'A' == TypeCategory(TupleDescAttr(res_tupdesc,col-1)->atttypid) ) {
                             pg_jsonapi::array_to_json_internal(datum, &a_response, false);
                         } else {
+                            ereport(WARNING, (errmsg_internal("jsonapi: %s resource:%s attname:%s type:%s oid:%d category:%c", __FUNCTION__, a_type.c_str(), attname, SPI_gettype(res_tupdesc,col), TupleDescAttr(res_tupdesc,col-1)->atttypid, TypeCategory(TupleDescAttr(res_tupdesc,col-1)->atttypid) )));
                             escape_json(&a_response, SPI_getvalue(res_tuple, res_tupdesc, col));
                         }
                         break;
