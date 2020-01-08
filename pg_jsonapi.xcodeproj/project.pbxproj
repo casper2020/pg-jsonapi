@@ -47,6 +47,7 @@
 		4E8DE5CC1B09EA74002D2BF5 /* jsoncpp.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = jsoncpp.cc; path = json/jsoncpp.cc; sourceTree = "<group>"; };
 		4E9AAD341B98BE2A006A4395 /* utils_adt_json.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = utils_adt_json.cc; path = src/utils_adt_json.cc; sourceTree = "<group>"; };
 		4EB2F9E31B1899F4008ED28F /* postgresql */ = {isa = PBXFileReference; lastKnownFileType = folder; path = postgresql; sourceTree = "<group>"; };
+		4EC3508823C5EFF100834B9E /* postgresql-9.4.24 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "postgresql-9.4.24"; path = "../postgresql-9.4.24"; sourceTree = "<group>"; };
 		4EC53E8D1B0DF3FB0080F63E /* resource_data.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = resource_data.h; path = src/resource_data.h; sourceTree = "<group>"; };
 		4EC53E8F1B0DF4080080F63E /* resource_data.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = resource_data.cc; path = src/resource_data.cc; sourceTree = "<group>"; };
 		4ED9B6681B05F8C300D07CCB /* pg_jsonapi.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pg_jsonapi.cc; path = src/pg_jsonapi.cc; sourceTree = "<group>"; };
@@ -125,6 +126,7 @@
 		A5952CC31AFA22E600530C24 = {
 			isa = PBXGroup;
 			children = (
+				4EC3508823C5EFF100834B9E /* postgresql-9.4.24 */,
 				4E07E7341AFCB9940043C0E8 /* makefile */,
 				4E891A5C1B0F92C30019A4FC /* settings.mk */,
 				4EB2F9E31B1899F4008ED28F /* postgresql */,
