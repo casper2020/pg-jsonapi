@@ -1547,7 +1547,7 @@ void pg_jsonapi::QueryBuilder::SerializeResource (StringInfoData& a_response, co
                     case DATEOID:
                     case TIMESTAMPOID:
                     case TIMESTAMPTZOID:
-                    // case XMLOID:
+                    case XMLOID:
                         escape_json(&a_response, SPI_getvalue(res_tuple, res_tupdesc, col));
                         break;
 
