@@ -172,11 +172,7 @@ jsonapi(PG_FUNCTION_ARGS)
     initStringInfo(&response);
     appendStringInfo(&response, "%*.*s", VARHDRSZ, VARHDRSZ, "~~~~~~~~~~");
     jsonapi_resetqb();
-    /*
-    if ( PG_NARGS() < 2 || PG_NARGS() > 9 || PG_ARGISNULL(0) || PG_ARGISNULL(1) ) {
-        g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA010"), pg_jsonapi::E_HTTP_BAD_REQUEST).SetMessage(NULL, "Expected arguments are: ( method, url[, body [, user_id[, company_id[, company_schema[, sharded_schema[, accounting_schema[, accounting_prefix]]]]]]] )");
-    }
-    */
+
     if ( PG_NARGS() != 9 || PG_ARGISNULL(0) || PG_ARGISNULL(1) ) {
         g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA010"), pg_jsonapi::E_HTTP_BAD_REQUEST).SetMessage(NULL, "Expected arguments are: ( method, url, body , user_id, company_id, company_schema, sharded_schema, accounting_schema, accounting_prefix )");
     }
