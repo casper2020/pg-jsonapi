@@ -214,22 +214,6 @@ bool pg_jsonapi::OperationRequest::BodyHasValidAttributes(const JsonapiJson::Val
         return false;
     }
 
-    const JsonapiJson::Value::Members& members = a_value.getMemberNames();
-    for ( JsonapiJson::Value::Members::const_iterator key = members.begin(); key != members.end(); ++key ) {
-        //#warning joana TODO: check key?
-        if ( ! (a_value[*key].isConvertibleTo(JsonapiJson::stringValue) || a_value[*key].isArray() ) ) {
-            AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value for attribute '%s'", (*key).c_str());
-            return false;
-        } else if ( a_value[*key].isArray() ) {
-            for ( JsonapiJson::ArrayIndex i = 0; i < a_value[*key].size(); i++ ) {
-                if ( ! a_value[*key][i].isConvertibleTo(JsonapiJson::stringValue) ) {
-                    AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value for attribute '%s[%d]'", (*key).c_str(), i);
-                    return false;
-                }
-            }
-        }
-    }
-
     return true;
 }
 
@@ -418,6 +402,9 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceInsertCmd()
     const ResourceConfig& rc = g_qb->GetDocumentConfig()->GetResource(rq_resource_type_);
     std::string values;
 
+    JsonapiJson::FastWriter writer;
+    writer.omitEndingLineFeed();
+
     q_buffer_ = "INSERT INTO ";
     rc.AddPGQueryFromItem(q_buffer_);
 
@@ -438,12 +425,20 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceInsertCmd()
         }
         q_buffer_ += rc.GetPGQueryColumn(*key);
 
-        if ( (*rq_body_data_)["attributes"][*key].isNull() ) {
+        if ( (*rq_body_data_)["attributes"][*key].isString() ) {
+            AddQuotedStringToBuffer(values, (*rq_body_data_)["attributes"][*key].asString().c_str(), true);
+        } else if ( (*rq_body_data_)["attributes"][*key].isNull() ) {
             values += "NULL";
-        } else if ( (*rq_body_data_)["attributes"][*key].isArray() ) {
+        } else if (      (*rq_body_data_)["attributes"][*key].isArray()
+                    &&   (*rq_body_data_)["attributes"][*key].size()
+                    && ! (*rq_body_data_)["attributes"][*key][0].isObject()
+                   ) {
+            /* temporary hack only serialize using old version when array does not have objects 
+               TODO: get tupdesc from DB and serialize as json depending on column definition
+            */
             GetArrayAsSQLValue((*rq_body_data_)["attributes"][*key], values);
         } else {
-            AddQuotedStringToBuffer(values, (*rq_body_data_)["attributes"][*key].asString().c_str(), true);
+            values += '\'' + writer.write((*rq_body_data_)["attributes"][*key]) + '\'' ;
         }
     }
 
@@ -501,6 +496,9 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceUpdateCmd()
     const ResourceConfig& rc = g_qb->GetDocumentConfig()->GetResource(rq_resource_type_);
     bool first = true;
 
+    JsonapiJson::FastWriter writer;
+    writer.omitEndingLineFeed();
+
     q_buffer_ = "UPDATE ";
     rc.AddPGQueryFromItem(q_buffer_);
 
@@ -512,14 +510,23 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceUpdateCmd()
         } else {
             q_buffer_ += ",";
         }
-        if ( (*rq_body_data_)["attributes"][*key].isNull() ) {
-            q_buffer_ += rc.GetPGQueryColumn(*key) + "= NULL";
-        } else if ( (*rq_body_data_)["attributes"][*key].isArray() ) {
-            q_buffer_ += rc.GetPGQueryColumn(*key) + "=";
+
+
+        q_buffer_ += rc.GetPGQueryColumn(*key) + "=";
+        if ( (*rq_body_data_)["attributes"][*key].isString() ) {
+            AddQuotedStringToBuffer(q_buffer_, (*rq_body_data_)["attributes"][*key].asString().c_str(), true);
+        } else if ( (*rq_body_data_)["attributes"][*key].isNull() ) {
+            q_buffer_ += "NULL";
+        } else if (      (*rq_body_data_)["attributes"][*key].isArray()
+                    &&   (*rq_body_data_)["attributes"][*key].size()
+                    && ! (*rq_body_data_)["attributes"][*key][0].isObject()
+                   ) {
+            /* temporary hack only serialize using old version when array does not have objects 
+               TODO: get tupdesc from DB and serialize as json depending on column definition
+            */
             GetArrayAsSQLValue((*rq_body_data_)["attributes"][*key], q_buffer_);
         } else {
-            q_buffer_ += rc.GetPGQueryColumn(*key) + "=";
-            AddQuotedStringToBuffer(q_buffer_, (*rq_body_data_)["attributes"][*key].asString().c_str(), true);
+            q_buffer_ += '\'' + writer.write((*rq_body_data_)["attributes"][*key]) + '\'' ;
         }
     }
 
