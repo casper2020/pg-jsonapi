@@ -1577,7 +1577,7 @@ void pg_jsonapi::QueryBuilder::SerializeResource (StringInfoData& a_response, co
 
                     case JSONOID:
                     case JSONBOID:
-                            ereport(WARNING, (errmsg_internal("jsonapi: %s *** JSON *** resource:%s attname:%s type:%s oid:%d category:%c", __FUNCTION__, a_type.c_str(), attname, SPI_gettype(res_tupdesc,col), TupleDescAttr(res_tupdesc,col-1)->atttypid, TypeCategory(TupleDescAttr(res_tupdesc,col-1)->atttypid) )));
+                            ereport(DEBUG2, (errmsg_internal("jsonapi: %s *** JSON *** resource:%s attname:%s type:%s oid:%d category:%c", __FUNCTION__, a_type.c_str(), attname, SPI_gettype(res_tupdesc,col), TupleDescAttr(res_tupdesc,col-1)->atttypid, TypeCategory(TupleDescAttr(res_tupdesc,col-1)->atttypid) )));
                     case NUMERICOID:
                         appendStringInfo(&a_response, "%s", SPI_getvalue(res_tuple, res_tupdesc, col));
                         break;
