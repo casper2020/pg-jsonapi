@@ -86,13 +86,13 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB (bool& o_config_exists)
     Oid s_oid = get_namespace_oid("public", true);
     Oid relid = InvalidOid;
     if ( ! OidIsValid(s_oid) ) {
-        ereport(LOG, (errmsg_internal("jsonapi [libversion %s]: cannot load configuration for URL '%s' ('public' schema does not exist)",
+        ereport(DEBUG1, (errmsg_internal("jsonapi [libversion %s]: cannot load configuration for URL '%s' ('public' schema does not exist)",
                                       LIB_VERSION, base_url_.c_str())));
         return true; // configuration is not mandatory
     } else {
         relid = get_relname_relid( "jsonapi_config", s_oid);
         if ( ! OidIsValid(relid) ) {
-            ereport(LOG, (errmsg_internal("jsonapi [libversion %s]: cannot load configuration for URL '%s' ('public.jsonapi_config' does not exist)",
+            ereport(DEBUG1, (errmsg_internal("jsonapi [libversion %s]: cannot load configuration for URL '%s' ('public.jsonapi_config' does not exist)",
                                           LIB_VERSION, base_url_.c_str())));
             return true; // configuration is not mandatory
         }
@@ -108,7 +108,7 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB (bool& o_config_exists)
 																							   (int)SPI_processed, base_url_.c_str(), ConfigQuery().c_str());
         rv = false;
     } else if ( 0 == SPI_processed ) {
-        ereport(LOG, (errmsg_internal("jsonapi [libversion %s]: no specific configuration for prefix '%s' statement: %s",
+        ereport(DEBUG1, (errmsg_internal("jsonapi [libversion %s]: no specific configuration for prefix '%s' statement: %s",
                                       LIB_VERSION, base_url_.c_str(), ConfigQuery().c_str() )));
         rv = true;
     } else if ( 1 == SPI_processed ) {
@@ -116,7 +116,7 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB (bool& o_config_exists)
 
         o_config_exists = true;
         if ( NULL == config_s || 0 == strlen(config_s) ) {
-            ereport(LOG, (errmsg_internal("jsonapi [libversion %s]: empty configuration for '%s'", LIB_VERSION, base_url_.c_str())) );
+            ereport(DEBUG1, (errmsg_internal("jsonapi [libversion %s]: empty configuration for '%s'", LIB_VERSION, base_url_.c_str())) );
             // configuration is not mandatory
         } else {
             if ( ! reader.parse(config_s, config_s + strlen(config_s), root, false) ) {
@@ -213,7 +213,7 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB (bool& o_config_exists)
                     }
                 }
                 if ( rv ) {
-                    ereport(LOG, (errmsg_internal("jsonapi [libversion %s]: success loading configuration for prefix '%s'", LIB_VERSION, base_url_.c_str() )));
+                    ereport(DEBUG1, (errmsg_internal("jsonapi [libversion %s]: success loading configuration for prefix '%s'", LIB_VERSION, base_url_.c_str() )));
                 }
             }
         }
