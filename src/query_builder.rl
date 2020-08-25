@@ -450,6 +450,7 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
                 if ( false == it->second.LoadConfigFromDB(config_exists) ) {
                     config_map_.erase(it);
                     it = config_map_.end();
+                    return false;
                 }
             }
         }
