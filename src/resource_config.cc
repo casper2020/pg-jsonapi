@@ -362,11 +362,6 @@ bool pg_jsonapi::ResourceConfig::SetRelationship(FieldType a_type, const Jsonapi
                                                                                                     type_.c_str(), EIsToOne == a_type ? "to-one" : "to-many", key.c_str());
             return false;
         }
-    } else if ( 0 == q_relations_[key].schema_.length() ) {
-        g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid configuration of 'resources[\"%s\"][\"%s\"][\"%s\"]',"
-                                                                                                " relationship schema must be configured with: \"pg-schema\", \"request-accounting-schema\", \"request-sharded-schema\" or \"request-company-schema\"",
-                                                                                                type_.c_str(), EIsToOne == a_type ? "to-one" : "to-many", key.c_str());
-        return false;
     }
     q_relations_[key].select_columns_ += "\""+ q_relations_[key].col_parent_id_ + "\" AS id";
     q_relations_[key].select_columns_ += ",\"" + col_child + "\" AS \"" + key + "\"";
@@ -562,11 +557,6 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
                                                                                                     type_.c_str());
             rv = false;
         }
-    } else if ( q_main_.job_tube_.empty() && 0 == q_main_.schema_.length() ) {
-        g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "incompatible configuration of 'resources[\"%s\"][\"pg-schema\"]',"
-                                                                                                " \"pg-schema\" should be defined because \"request-accounting-schema\", \"request-sharded-schema\" and \"request-company-schema\" are false",
-                                                                                                type_.c_str());
-        rv = false;
     }
 
     if ( a_config.isMember("attributes") ) {
