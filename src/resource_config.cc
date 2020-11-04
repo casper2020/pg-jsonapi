@@ -351,6 +351,7 @@ bool pg_jsonapi::ResourceConfig::SetRelationship(FieldType a_type, const Jsonapi
             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "incompatible configuration of 'resources[\"%s\"][\"%s\"][\"%s\"][\"pg-schema\"]',"
                                                                                                     " \"pg-schema\" may only be defined if \"request-accounting-schema\", \"request-sharded-schema\" and \"request-company-schema\" are false",
                                                                                                     type_.c_str(), EIsToOne == a_type ? "to-one" : "to-many", key.c_str());
+            return false;
         }
         count  = q_relations_[key].use_rq_accounting_schema_ ? 1 : 0;
         count += q_relations_[key].use_rq_sharded_schema_ ? 1 : 0;
@@ -359,11 +360,8 @@ bool pg_jsonapi::ResourceConfig::SetRelationship(FieldType a_type, const Jsonapi
             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "incompatible configuration of 'resources[\"%s\"][\"%s\"][\"%s\"]',"
                                                                                                     " \"request-accounting-schema\", \"request-sharded-schema\" and \"request-company-schema\" cannot be true simultaneously",
                                                                                                     type_.c_str(), EIsToOne == a_type ? "to-one" : "to-many", key.c_str());
+            return false;
         }
-    } else if ( 0 == q_relations_[key].schema_.length() ) {
-        g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid configuration of 'resources[\"%s\"][\"%s\"][\"%s\"]',"
-                                                                                                " relationship schema must be configured with: \"pg-schema\", \"request-accounting-schema\", \"request-sharded-schema\" or \"request-company-schema\"",
-                                                                                                type_.c_str(), EIsToOne == a_type ? "to-one" : "to-many", key.c_str());
     }
     q_relations_[key].select_columns_ += "\""+ q_relations_[key].col_parent_id_ + "\" AS id";
     q_relations_[key].select_columns_ += ",\"" + col_child + "\" AS \"" + key + "\"";
@@ -520,6 +518,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
             if ( !a_config[incompatible_options[i]].isNull() ) {
                 g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "conflicting key 'resources[\"%s\"][\"%s\"]' may only be used with 'resources[\"%s\"][\"pg-function\"]'",
                             type_.c_str(), incompatible_options[i], type_.c_str());
+                rv = false;
             }
         }
         if (   (!a_config["request-offset-function-arg"].isNull() &&  a_config["request-limit-function-arg"].isNull())
@@ -527,6 +526,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
         ) {
             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "inconsistent keys 'resources[\"%s\"][\"offset-function-arg\"]' and 'resources[\"%s\"][\"limit-function-arg\"]', both keys must be provided if function supports pagination",
                                                                                                     type_.c_str(), type_.c_str());
+            rv = false;
         }
         q_main_.table_.clear();
     } else {
@@ -535,6 +535,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
             if ( !a_config[incompatible_options[i]].isNull() ) {
                 g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "conflicting keys 'resources[\"%s\"][\"pg-function\"]' and 'resources[\"%s\"][\"%s\"]'",
                             type_.c_str(), type_.c_str(), incompatible_options[i]);
+                rv = false;
             }
         }
     }
@@ -545,6 +546,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "incompatible configuration of 'resources[\"%s\"][\"pg-schema\"]',"
                                                                                                     " \"pg-schema\" may only be defined if \"request-accounting-schema\", \"request-sharded-schema\" and \"request-company-schema\" are false",
                                                                                                     type_.c_str());
+            rv = false;
         }
         count  = q_main_.use_rq_accounting_schema_ ? 1 : 0;
         count += q_main_.use_rq_sharded_schema_ ? 1 : 0;
@@ -553,12 +555,10 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "incompatible configuration of 'resources[\"%s\"]',"
                                                                                                     " \"request-accounting-schema\", \"request-sharded-schema\" and \"request-company-schema\" cannot be true simultaneously",
                                                                                                     type_.c_str());
+            rv = false;
         }
-    } else if ( q_main_.job_tube_.empty() && 0 == q_main_.schema_.length() ) {
-        g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "incompatible configuration of 'resources[\"%s\"][\"pg-schema\"]',"
-                                                                                                " \"pg-schema\" should be defined because \"request-accounting-schema\", \"request-sharded-schema\" and \"request-company-schema\" are false",
-                                                                                                type_.c_str());
     }
+
     if ( a_config.isMember("attributes") ) {
         if ( ! a_config["attributes"].isArray() ) {
             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid value for 'resources[\"%s\"][\"attributes\"]', array is expected", type_.c_str());

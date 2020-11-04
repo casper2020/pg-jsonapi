@@ -113,6 +113,7 @@ When there are observed resources, the resource object on the response document 
 
 Name of the schema to be used.
 If not present, and `request-accounting-schema` is true than schema argument is used, otherwise if `request-sharded-schema` is true than sharded_schema argument is used, otherwise if `request-company-schema` is true than company_schema argument is used.
+If none of the 4 schema options is present, will depend on current search_path.
 
 ### `request-accounting-schema`
 
