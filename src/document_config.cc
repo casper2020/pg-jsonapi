@@ -110,7 +110,7 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB (bool& o_config_exists)
     } else if ( 0 == SPI_processed ) {
         ereport(DEBUG1, (errmsg_internal("jsonapi [libversion %s]: no specific configuration for prefix '%s' statement: %s",
                                       LIB_VERSION, base_url_.c_str(), ConfigQuery().c_str() )));
-        rv = true;
+        rv = true; // not really needed but it's more explicit
     } else if ( 1 == SPI_processed ) {
         char* config_s = SPI_getvalue(SPI_tuptable->vals[0], SPI_tuptable->tupdesc, 1);
 
@@ -212,6 +212,11 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB (bool& o_config_exists)
                         }
                     }
                 }
+
+                if ( rv && g_qb->HasErrors() ) {
+                    ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: uncontrolled errors while loading configuration for prefix '%s'", LIB_VERSION, base_url_.c_str() )));
+                    rv = false;
+                }
                 if ( rv ) {
                     ereport(DEBUG1, (errmsg_internal("jsonapi [libversion %s]: success loading configuration for prefix '%s'", LIB_VERSION, base_url_.c_str() )));
                 }
@@ -221,7 +226,6 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB (bool& o_config_exists)
         if ( config_s ) {
             pfree(config_s);
         }
-
 
     }
 
