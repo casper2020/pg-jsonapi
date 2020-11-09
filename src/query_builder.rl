@@ -584,6 +584,9 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
             if ( -1 == rq_page_size_param_ ) {
                 q_page_size_ = config_->GetResource(GetResourceType()).PageSize();
             } else {
+                if ( rq_page_size_param_ > config_->GetResource(GetResourceType()).PageLimit() ) 
+                    AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "page[size] for resource '%s' cannot exceed %u", GetResourceType().c_str(), config_->GetResource(GetResourceType()).PageLimit())
+                    .SetSourceParam("page[size]=%zd", rq_page_size_param_);
                 q_page_size_ = rq_page_size_param_;
             }
             if ( -1 == rq_page_number_param_ ) {
@@ -592,9 +595,9 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
                 }
             } else if ( 0 == q_page_size_ ) {
                 AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "page[size] is not specified, cannot apply pagination")
-                .SetSourceParam("page[number]=%zd", rq_page_size_param_);
+                .SetSourceParam("page[number]=%zd", rq_page_number_param_);
             } else {
-                q_page_number_ =rq_page_number_param_;
+                q_page_number_ = rq_page_number_param_;
             }
         } else {
             if ( -1 != rq_page_size_param_ ) {
@@ -1039,7 +1042,7 @@ void pg_jsonapi::QueryBuilder::AddInClause (const std::string& a_column, StringS
 }
 
 /**
- * @brief GetTopQuery - TODO - merge with GetInclusionQuery?
+ * @brief GetTopQuery
  */
 const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, bool a_apply_filters)
 {
@@ -1165,12 +1168,18 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
             }
         }
 
-        if ( q_page_size_ ) {
+        if ( q_page_size_ || ( GetResourceType().length() && IsCollection() ) ) {
             char offset_buffer[32];
             char limit_buffer[32];
 
-            snprintf(offset_buffer, sizeof(offset_buffer), "%zd", (q_page_number_-1) * q_page_size_ );
-            snprintf(limit_buffer, sizeof(limit_buffer), "%zd", q_page_size_ );
+            if ( q_page_size_ ) {
+                snprintf(offset_buffer, sizeof(offset_buffer), "%u", (q_page_number_-1) * q_page_size_ );
+                snprintf(limit_buffer, sizeof(limit_buffer), "%u", q_page_size_ );
+            } else {
+                strcpy(offset_buffer, "0");
+                snprintf(limit_buffer, sizeof(limit_buffer), "%u", config_->GetResource(GetResourceType()).PageLimit()+1 );
+            }
+
             if ( ! rc.IsQueryFromFunction() ) {
                 q_buffer_ += " OFFSET ";
                 q_buffer_ += offset_buffer;
@@ -1234,12 +1243,17 @@ const std::string& pg_jsonapi::QueryBuilder::GetRelationshipQuery (const std::st
 }
 
 /**
- * @brief GetInclusionQuery - TODO - merge with GetTopQuery?
+ * @brief GetInclusionQuery
  */
 const std::string& pg_jsonapi::QueryBuilder::GetInclusionQuery (const std::string& a_type)
 {
     const ResourceConfig& rc = config_->GetResource(a_type);
+    char limit_buffer[32];
 
+    //#warning TODO: apply pagination
+    q_required_count_ = q_to_be_included_[a_type].size();
+
+    // prepare query
     q_buffer_.clear();
     q_buffer_ = "SELECT " + rc.GetPGQueryColumns();
     q_buffer_ += " FROM ";
@@ -1265,8 +1279,9 @@ const std::string& pg_jsonapi::QueryBuilder::GetInclusionQuery (const std::strin
         q_buffer_ += " ORDER BY " + rc.GetPGQueryOrder();
     }
 
-    //#warning TODO: apply pagination
-    q_required_count_ = q_to_be_included_[a_type].size();
+    snprintf(limit_buffer, sizeof(limit_buffer), "%u", rc.PageLimit()+1 );
+    q_buffer_ += " LIMIT ";
+    q_buffer_ += limit_buffer;
 
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s return:%s",
                                      __FUNCTION__, q_buffer_.c_str())));
@@ -1284,6 +1299,15 @@ bool pg_jsonapi::QueryBuilder::ProcessQueryResult(const std::string& a_type, siz
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s a_type:%s a_depth:%zd", __FUNCTION__, a_type.c_str(), a_depth)));
 
     StringSet new_ids;
+
+    if ( SPI_processed > config_->GetResource(a_type).PageLimit() ) {
+        if ( 0 == a_depth ) {
+            AddError(JSONAPI_MAKE_SQLSTATE("JA019"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "too many values returned for resource '%s', specify a page size that will not exceed %u results", a_type.c_str(), config_->GetResource(a_type).PageLimit());
+        } else {
+            AddError(JSONAPI_MAKE_SQLSTATE("JA020"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "too many values returned for resource '%s', specify a page size that will not exceed %u results", a_type.c_str(), config_->GetResource(a_type).PageLimit());
+        }
+        return false;
+    }
 
     if ( q_required_count_ && q_required_count_ != SPI_processed ) {
         if( 0 == SPI_processed ) {

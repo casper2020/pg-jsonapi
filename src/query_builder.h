@@ -106,8 +106,8 @@ namespace pg_jsonapi
         bool            q_top_must_be_included_;
         size_t          q_top_total_rows_;
         size_t          q_top_grand_total_rows_;
-        size_t          q_page_size_;
-        size_t          q_page_number_;
+        uint            q_page_size_;
+        uint            q_page_number_;
         ErrorVector     q_errors_;
         HttpStatusCode  q_http_status_;
         const char*     q_json_function_data_;

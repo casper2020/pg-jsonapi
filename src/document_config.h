@@ -49,6 +49,7 @@ namespace pg_jsonapi
         bool        version_;
         bool        compound_;
         uint        page_size_;
+        uint        page_limit_;
         bool        show_links_;
         bool        show_null_;
         bool        restrict_type_;
@@ -74,7 +75,9 @@ namespace pg_jsonapi
 
         static bool DefaultHasVersion ();
         static bool DefaultIsCompound ();
-        static int  DefaultPageSize   ();
+        static uint DefaultPageSize   ();
+        static uint DefaultPageLimit  ();
+        static uint MaximumPageLimit  ();
         static bool DefaultShowLinks  ();
         static bool DefaultShowNull   ();
         static bool DefaultTypeRestriction();
@@ -87,13 +90,14 @@ namespace pg_jsonapi
 
         bool HasVersion                 () const;
         bool IsCompound                 () const;
-        int  PageSize                   () const;
+        uint PageSize                   () const;
+        uint PageLimit                  () const;
         bool ShowLinks                  () const;
         bool ShowNull                   () const;
         bool HasTypeRestriction         () const;
         bool HasAttrRestriction         () const;
         bool EmptyIsNull                () const;
-        bool UseRequestAccountingSchema           () const;
+        bool UseRequestAccountingSchema () const;
         bool UseRequestShardedSchema    () const;
         bool UseRequestCompanySchema    () const;
         bool UseRequestAccountingPrefix () const;
@@ -122,9 +126,19 @@ namespace pg_jsonapi
         return true;
     }
 
-    inline int DocumentConfig::DefaultPageSize ()
+    inline uint DocumentConfig::DefaultPageSize ()
     {
         return 1000;
+    }
+
+    inline uint DocumentConfig::DefaultPageLimit ()
+    {
+        return 20000;
+    }
+
+    inline uint DocumentConfig::MaximumPageLimit ()
+    {
+        return 1048576; // we will not allow to return results above maximum number of lines on excel
     }
 
     inline bool DocumentConfig::DefaultShowLinks ()
@@ -182,9 +196,14 @@ namespace pg_jsonapi
         return compound_;
     }
 
-    inline int DocumentConfig::PageSize () const
+    inline uint DocumentConfig::PageSize () const
     {
         return page_size_;
+    }
+
+    inline uint DocumentConfig::PageLimit () const
+    {
+        return page_limit_;
     }
 
     inline bool DocumentConfig::ShowLinks () const

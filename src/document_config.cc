@@ -46,6 +46,7 @@ pg_jsonapi::DocumentConfig::DocumentConfig (const std::string a_base_url) : base
     version_                       = DefaultHasVersion();
     compound_                      = DefaultIsCompound();
     page_size_                     = DefaultPageSize();
+    page_limit_                    = DefaultPageLimit();
     show_links_                    = DefaultShowLinks();
     show_null_                     = DefaultShowNull();
     restrict_type_                 = DefaultTypeRestriction();
@@ -139,7 +140,8 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB (bool& o_config_exists)
                     {"request-accounting-prefix", &use_request_accounting_prefix_}
                 };
                 UIntOption uint_options[] = {
-                    {"page-size", &page_size_}
+                    {"page-size", &page_size_},
+                    {"page-limit", &page_limit_}
                 };
                 StringOption str_options[] = {
                     {"pg-search_path", &template_search_path_},
@@ -164,7 +166,7 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB (bool& o_config_exists)
                         if ( false == option.isUInt() ) {
                             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid value for '%s' for '%s', uint is expected.",
                                         uint_options[i].name, base_url_.c_str());
-                            return false;
+                            rv = false;
                         } else {
                             *(uint_options[i].ptr) = option.asUInt();
                         }
@@ -181,6 +183,16 @@ bool pg_jsonapi::DocumentConfig::LoadConfigFromDB (bool& o_config_exists)
                             *(str_options[i].ptr) = option.asString();
                         }
                     }
+                }
+
+                if ( page_limit_ > MaximumPageLimit() ) {
+                    g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid value for 'page-limit' for '%s', maximum allowed page-limit is %u ",
+                                base_url_.c_str(), MaximumPageLimit());
+                    rv = false;
+                } else if ( page_size_ > page_limit_ ) {
+                    g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid value for 'page-size' for '%s', it cannot exceed 'page-limit' which is %u ",
+                                base_url_.c_str(), page_limit_);
+                    rv = false;
                 }
 
                 /* resource specification */

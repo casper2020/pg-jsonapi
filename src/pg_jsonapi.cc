@@ -68,6 +68,7 @@ void jsonapi_initqb()
         if ( NULL == g_qb ) {
             ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("jsonapi: out of memory")));
         }
+        ereport(DEBUG3, (errmsg_internal("jsonapi: %s g_qb=%p", __FUNCTION__, g_qb)));
     }
 }
 

@@ -390,6 +390,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
     q_main_.order_by_ = parent_doc_->DefaultOrder();
     q_main_.needs_search_path_ = false;
     q_main_.id_from_rowset_ = false;
+    q_main_.page_limit_ = parent_doc_->PageLimit();
     q_main_.page_size_ = parent_doc_->PageSize();
     q_main_.show_links_ = parent_doc_->ShowLinks();
     q_main_.show_null_ = parent_doc_->ShowNull();
@@ -414,6 +415,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
     UIntOption uint_options[] = {
         {"job-ttr",                     &q_main_.job_ttr_},
         {"job-validity",                &q_main_.job_validity_},
+        {"page-limit",                  &q_main_.page_limit_},
         {"page-size",                   &q_main_.page_size_}
     };
     StringOption str_options[] = {
@@ -464,6 +466,17 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
             }
         }
     }
+    if ( q_main_.page_limit_ > parent_doc_->MaximumPageLimit() || q_main_.page_size_ > parent_doc_->MaximumPageLimit() ) {
+        g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid value for 'resources[\"%s\"][\"page-limit\"]', maximum allowed page-limit is %u ",
+                    type_.c_str(), parent_doc_->MaximumPageLimit());
+        rv = false;
+    }
+    if ( q_main_.page_size_ > q_main_.page_limit_ ) {
+        g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "invalid value for 'resources[\"%s\"][\"page-size\"]', it cannot exceed 'page-limit' which is %u ",
+                    type_.c_str(), q_main_.page_limit_);
+        rv = false;
+    }
+
     for ( size_t i = 0; i < sizeof(str_options)/sizeof(str_options[0]); ++i ) {
         const JsonapiJson::Value& option = a_config[str_options[i].name];
         if ( ! option.isNull() ) {
