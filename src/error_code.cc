@@ -48,6 +48,8 @@ namespace pg_jsonapi {
         ,{ "JA016", E_HTTP_INTERNAL_SERVER_ERROR, "Erro de sistema JA016: recurso não existente. Por favor contacte o suporte técnico." }       // inconsistent data
         ,{ "JA017", E_HTTP_INTERNAL_SERVER_ERROR, "Erro de sistema JA017: configuração inválida. Por favor contacte o suporte técnico." }       // invalid configuration
         ,{ "JA018", E_HTTP_INTERNAL_SERVER_ERROR, "Erro de sistema JA018: pedido inválido. Por favor contacte o suporte técnico." }             // unsupported request detected when serializing response
+        ,{ "JA019", E_HTTP_BAD_REQUEST,           "Erro de sistema JA019: demasiados resultados na resposta de topo. Por favor utilize menos items por página." }       // too many resources on top level
+        ,{ "JA020", E_HTTP_BAD_REQUEST,           "Erro de sistema JA020: demasiados resultados nas relações a incluir. Por favor utilize menos items por página." }    // too many items on resource to be included
 
         // default error to be used per HTTP status codes
         // http://www.postgresql.org/docs/9.4/static/errcodes-appendix.html
@@ -64,7 +66,7 @@ namespace pg_jsonapi {
         ,{ "P0000", E_HTTP_INTERNAL_SERVER_ERROR, "Erro de sistema P0000: erro interno na base de dados. Por favor contacte o suporte técnico." }  // plpgsql_error
         ,{ "P0001", E_HTTP_INTERNAL_SERVER_ERROR, "Erro de sistema P0001: erro interno na base de dados. Por favor contacte o suporte técnico." }  // raise_exception
         ,{ "P0002", E_HTTP_NOT_FOUND,             "Não existem dados." }        // no_data_found
-        ,{ "P0003", E_HTTP_NOT_FOUND,             "Existem dados repetidos." }  // too_many_rows
+        ,{ "P0003", E_HTTP_INTERNAL_SERVER_ERROR, "Existem dados repetidos." }  // too_many_rows
 
         // Class 57 — Operator Intervention
         ,{ "57000", E_HTTP_INTERNAL_SERVER_ERROR, "Não é possível executar a operação neste momento. Por favor tente mais tarde." }  // operator_intervention
