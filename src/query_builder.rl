@@ -580,15 +580,22 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
          TODO: rq_include_param_
          */
 
-        if ( GetResourceType().length() && IsCollection() ) {
+        if ( GetResourceType().length() && ( IsCollection() || ( HasRelated () && ! IsRelationship() ) ) ) {
+            std::string type_pag = ( HasRelated() && !IsRelationship() ) ? config_->GetResource(GetResourceType()).GetFieldResourceType(GetRelated()) : GetResourceType();
             if ( -1 == rq_page_size_param_ ) {
-                q_page_size_ = config_->GetResource(GetResourceType()).PageSize();
+                if ( !HasRelated() ) {
+                    q_page_size_ = config_->GetResource(type_pag).PageSize();
+                }
             } else {
-                if ( rq_page_size_param_ > config_->GetResource(GetResourceType()).PageLimit() ) 
-                    AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "page[size] for resource '%s' cannot exceed %u", GetResourceType().c_str(), config_->GetResource(GetResourceType()).PageLimit())
+                if ( rq_page_size_param_ > config_->GetResource(type_pag).PageLimit() ) {
+                    AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "page[size] for resource '%s' cannot exceed %u", 
+                        config_->GetResource(type_pag).GetType().c_str(), config_->GetResource(type_pag).PageLimit())
                     .SetSourceParam("page[size]=%zd", rq_page_size_param_);
+                }
                 q_page_size_ = rq_page_size_param_;
             }
+            ereport(DEBUG4, (errmsg_internal("jsonapi: %s type_pag:%s q_page_size_:%u rq_page_size_param_:%zd", __FUNCTION__, type_pag.c_str(), q_page_size_, rq_page_size_param_)));
+
             if ( -1 == rq_page_number_param_ ) {
                 if ( q_page_size_ ) {
                     q_page_number_ = 1;
@@ -919,10 +926,6 @@ bool pg_jsonapi::QueryBuilder::ProcessRelationships(const std::string& a_type, s
         }
     }
 
-    if ( top_related ) {
-        q_data_[GetRelatedType()].top_processed_ = SPI_processed;
-    }
-
     return true;
 }
 
@@ -1248,9 +1251,9 @@ const std::string& pg_jsonapi::QueryBuilder::GetRelationshipQuery (const std::st
 const std::string& pg_jsonapi::QueryBuilder::GetInclusionQuery (const std::string& a_type)
 {
     const ResourceConfig& rc = config_->GetResource(a_type);
+    char offset_buffer[32];
     char limit_buffer[32];
 
-    //#warning TODO: apply pagination
     q_required_count_ = q_to_be_included_[a_type].size();
 
     // prepare query
@@ -1279,9 +1282,29 @@ const std::string& pg_jsonapi::QueryBuilder::GetInclusionQuery (const std::strin
         q_buffer_ += " ORDER BY " + rc.GetPGQueryOrder();
     }
 
-    snprintf(limit_buffer, sizeof(limit_buffer), "%u", rc.PageLimit()+1 );
-    q_buffer_ += " LIMIT ";
-    q_buffer_ += limit_buffer;
+    ereport(DEBUG4, (errmsg_internal("jsonapi: %s a_type:%s rc.PageLimit:%u q_page_size_:%u rq_page_size_param_:%zd", __FUNCTION__, a_type.c_str(), rc.PageLimit(), q_page_size_, rq_page_size_param_)));
+    if ( HasRelated() && !IsRelationship() && a_type == config_->GetResource(GetResourceType()).GetFieldResourceType(GetRelated()) ) {
+        if ( -1 != rq_page_size_param_ ) {
+            // only use pagination on related resource request if pagination was explicitly requested
+            snprintf(offset_buffer, sizeof(offset_buffer), "%u", (q_page_number_-1) * q_page_size_ );
+            snprintf(limit_buffer, sizeof(limit_buffer), "%u", q_page_size_ );
+        } else {
+            strcpy(offset_buffer, "0");
+            snprintf(limit_buffer, sizeof(limit_buffer), "%u", rc.PageLimit()+1 );
+        }
+
+        q_buffer_ += " OFFSET ";
+        q_buffer_ += offset_buffer;
+
+        q_buffer_ += " LIMIT ";
+        q_buffer_ += limit_buffer;
+
+        q_required_count_ = 0;
+    } else {
+        snprintf(limit_buffer, sizeof(limit_buffer), "%u", rc.PageLimit()+1 );
+        q_buffer_ += " LIMIT ";
+        q_buffer_ += limit_buffer;
+    }
 
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s return:%s",
                                      __FUNCTION__, q_buffer_.c_str())));
@@ -1323,6 +1346,10 @@ bool pg_jsonapi::QueryBuilder::ProcessQueryResult(const std::string& a_type, siz
         }
 
         return false;
+    }
+
+    if ( HasRelated() && !IsRelationship() && a_type == config_->GetResource(GetResourceType()).GetFieldResourceType(GetRelated()) ) {
+        q_data_[a_type].top_processed_ = SPI_processed;
     }
 
     if ( 0 == SPI_processed ) {

@@ -45,7 +45,7 @@ namespace pg_jsonapi {
         ,{ "JA013", E_HTTP_BAD_REQUEST,           "Erro de sistema JA013: pedido inválido. Por favor contacte o suporte técnico." }             // invalid path
         ,{ "JA014", E_HTTP_BAD_REQUEST,           "Erro de sistema JA014: pedido incompleto. Por favor contacte o suporte técnico." }           // missing body
         ,{ "JA015", E_HTTP_NOT_FOUND,             "Erro de sistema JA015: recurso não existente. Por favor contacte o suporte técnico." }       // data not found
-        ,{ "JA016", E_HTTP_INTERNAL_SERVER_ERROR, "Erro de sistema JA016: recurso não existente. Por favor contacte o suporte técnico." }       // inconsistent data
+        ,{ "JA016", E_HTTP_INTERNAL_SERVER_ERROR, "Erro de sistema JA016: dados inconsistentes. Por favor contacte o suporte técnico." }        // inconsistent data
         ,{ "JA017", E_HTTP_INTERNAL_SERVER_ERROR, "Erro de sistema JA017: configuração inválida. Por favor contacte o suporte técnico." }       // invalid configuration
         ,{ "JA018", E_HTTP_INTERNAL_SERVER_ERROR, "Erro de sistema JA018: pedido inválido. Por favor contacte o suporte técnico." }             // unsupported request detected when serializing response
         ,{ "JA019", E_HTTP_BAD_REQUEST,           "Erro de sistema JA019: demasiados resultados na resposta de topo. Por favor utilize menos items por página." }       // too many resources on top level
