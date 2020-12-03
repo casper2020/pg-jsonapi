@@ -542,9 +542,14 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
                                                                                                     type_.c_str(), type_.c_str());
             rv = false;
         }
+        if ( FunctionSupportsCountColumn() && FunctionSupportsCounts() == false ) {
+            g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "conflicting options on resource '%s' option 'request-count-column-output' can only be used along option 'request-count-function-arg'", type_.c_str());
+            rv = false;
+        }
         q_main_.table_.clear();
     } else {
-        const char* incompatible_options[] = {"returns-json", "request-accounting-schema-function-arg", "request-sharded-schema-function-arg", "request-company-schema-function-arg", "request-accounting-prefix-function-arg", "request-user-function-arg", "request-company-function-arg", "request-id-function-arg", "request-count-function-arg", "request-filter-function-arg", "request-offset-function-arg", "request-limit-function-arg", "id-from-rowset"};
+        const char* incompatible_options[] = {"returns-json", "request-accounting-schema-function-arg", "request-sharded-schema-function-arg", "request-company-schema-function-arg", "request-accounting-prefix-function-arg", "request-user-function-arg", "request-company-function-arg", "request-id-function-arg", "request-count-function-arg",
+            "request-count-column-output", "request-filter-function-arg", "request-offset-function-arg", "request-limit-function-arg", "id-from-rowset"};
         for ( size_t i = 0; i < sizeof(incompatible_options)/sizeof(incompatible_options[0]); ++i ) {
             if ( !a_config[incompatible_options[i]].isNull() ) {
                 g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA017"), E_HTTP_INTERNAL_SERVER_ERROR).SetMessage(NULL, "conflicting keys 'resources[\"%s\"][\"pg-function\"]' and 'resources[\"%s\"][\"%s\"]'",
