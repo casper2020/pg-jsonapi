@@ -436,6 +436,7 @@ bool pg_jsonapi::ResourceConfig::SetValues(const JsonapiJson::Value& a_config)
         {"request-company-function-arg",            &q_main_.function_arg_rq_company_},
         {"request-id-function-arg",                 &q_main_.function_arg_rq_col_id_},
         {"request-count-function-arg",              &q_main_.function_arg_rq_count_},
+        {"request-count-column-output",             &q_main_.function_arg_rq_count_column_},
         {"request-order-function-arg",              &q_main_.function_arg_rq_order_},
         {"request-filter-function-arg",             &q_main_.function_arg_rq_filter_},
         {"request-offset-function-arg",             &q_main_.function_arg_rq_page_offset_},

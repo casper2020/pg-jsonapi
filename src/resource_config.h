@@ -107,6 +107,7 @@ namespace pg_jsonapi
             std::string      function_arg_rq_page_offset_;
             std::string      function_arg_rq_page_limit_;
             std::string      function_arg_rq_count_;
+            std::string      function_arg_rq_count_column_;
             std::string      function_arg_rq_filter_;
             std::string      function_arg_rq_order_;
             bool             id_from_rowset_;
@@ -219,6 +220,8 @@ namespace pg_jsonapi
         bool                     FunctionSupportsPagination       () const;
         const std::string&       GetPGFunctionArgCount            () const;
         bool                     FunctionSupportsCounts           () const;
+        bool                     FunctionSupportsCountColumn      () const;
+        const std::string&       GetPGFunctionCountColumn         () const;
         const std::string&       GetPGFunctionArgOrder            () const;
         bool                     FunctionSupportsOrder            () const;
         const std::string&       GetPGFunctionArgFilter           () const;
@@ -413,6 +416,16 @@ namespace pg_jsonapi
     inline bool ResourceConfig::FunctionSupportsCounts () const
     {
         return ( q_main_.function_arg_rq_count_.length() > 0 );
+    }
+
+    inline bool ResourceConfig::FunctionSupportsCountColumn () const
+    {
+        return ( q_main_.function_arg_rq_count_column_.length() > 0 );
+    }
+
+    inline const std::string& ResourceConfig::GetPGFunctionCountColumn () const
+    {
+        return q_main_.function_arg_rq_count_column_;
     }
 
     inline const std::string& ResourceConfig::GetPGFunctionArgOrder () const

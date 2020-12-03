@@ -746,11 +746,14 @@ void pg_jsonapi::QueryBuilder::CleanRelationshipInclusion()
 bool pg_jsonapi::QueryBuilder::ProcessCounter (size_t& a_count)
 {
     Datum  datum;
+    Oid    result_oid;
     bool   is_null;
 
+    result_oid = TupleDescAttr(SPI_tuptable->tupdesc,0)->atttypid;
     if (   1 != SPI_processed
         || 1 != SPI_tuptable->tupdesc->natts
-        || INT8OID != TupleDescAttr(SPI_tuptable->tupdesc,0)->atttypid ) {
+        || (INT8OID != result_oid && INT4OID != result_oid)
+        ) {
         return false;
     }
     datum = SPI_getbinval(SPI_tuptable->vals[0], SPI_tuptable->tupdesc, 1, &is_null);
@@ -1058,9 +1061,13 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
     q_buffer_ = "SELECT ";
 
     if ( a_count_rows ) {
-        q_buffer_ += " COUNT( ";
-        q_buffer_ += rc.GetPGQueryColId();
-        q_buffer_ += " ) ";
+        if ( rc.FunctionSupportsCountColumn() ) {
+            q_buffer_ += rc.GetPGFunctionCountColumn();
+        } else {
+            q_buffer_ += " COUNT( ";
+            q_buffer_ += rc.GetPGQueryColId();
+            q_buffer_ += " ) ";
+        }
     } else {
         q_buffer_ += rc.GetPGQueryColumns();
     }
