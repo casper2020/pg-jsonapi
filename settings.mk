@@ -39,8 +39,8 @@ ifeq ($(shell uname -s),Darwin)
   CLANG_CXX_LANGUAGE_STANDARD = c++11
 else
   CFLAGS += -DENABLE_NLS=1
-  CXXFLAGS += -std=c++11
 endif
+CXXFLAGS += -std=c++11
 
 
 ifeq ($(GCC_WARN_SHADOW),YES)
