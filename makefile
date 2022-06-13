@@ -21,7 +21,7 @@
 
 LIB_NAME:= pg-jsonapi
 ifndef LIB_VERSION
-	LIB_VERSION := $(shell cat Version)
+	LIB_VERSION := 2.4.2
 endif
 
 include settings.mk
@@ -57,6 +57,7 @@ EXTRA_CLEAN := $(RAGEL_FILES:.rl=.cc) $(LIB_NAME).so*
 
 PGXS        := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
+SHLIB_LINK  += -L/Applications/casper.app/Contents/MacOS/openssl/lib
 
 debug:
 	xcodebuild -configuration Debug
