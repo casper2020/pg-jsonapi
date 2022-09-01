@@ -55,7 +55,7 @@ namespace pg_jsonapi {
         // http://www.postgresql.org/docs/9.4/static/errcodes-appendix.html
 
         // Class 23 — Integrity Constraint Violation
-        ,{ "23000", E_HTTP_BAD_REQUEST,           "O valor indicado não existe na tabela relacionada." }        // integrity_constraint_violation
+        ,{ "23000", E_HTTP_BAD_REQUEST,           "Erro de restrição numa tabela relacionada." }                // integrity_constraint_violation
         ,{ "23001", E_HTTP_BAD_REQUEST,           "O valor indicado não é válido para o campo." }               // restrict_violation
         ,{ "23502", E_HTTP_BAD_REQUEST,           "O campo não pode ser vazio." }                               // not_null_violation
         ,{ "23503", E_HTTP_BAD_REQUEST,           "Erro de restrição numa tabela relacionada." }                // foreign_key_violation
