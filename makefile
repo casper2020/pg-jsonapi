@@ -118,6 +118,7 @@ EXTRA_CLEAN := $(RAGEL_FILES:.rl=.cc) $(LIB_NAME).so*
 
 PGXS        := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
+override CPPFLAGS := $(subst Xcode-beta,Xcode,$(CPPFLAGS))
 SHLIB_LINK  += $(OPENSSL_LDFLAGS)
 
 # developer

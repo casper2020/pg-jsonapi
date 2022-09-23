@@ -8,3 +8,4 @@ pg-jsonapi*.so
 pg-jsonapi.control
 pg_jsonapi.xcodeproj/project.xcworkspace
 pg_jsonapi.xcodeproj/xcuserdata/
+pg_jsonapi.xcodeproj/xcshareddata/
