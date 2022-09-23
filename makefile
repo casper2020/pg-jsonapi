@@ -118,7 +118,16 @@ EXTRA_CLEAN := $(RAGEL_FILES:.rl=.cc) $(LIB_NAME).so*
 
 PGXS        := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
-override CPPFLAGS := $(subst Xcode-beta,Xcode,$(CPPFLAGS))
+
+## OVERRIDE sysroot ##
+ifeq (Darwin,$(PLATFORM))
+  XCODE_APP_DIR:=$(shell echo "${XCODE_APP_DIR}")
+  # only if XCODE_APP_DIR is not set ( it should only be set on beta machines )
+  ifndef XCODE_APP_DIR
+    override CPPFLAGS := $(subst Xcode-beta,Xcode,$(CPPFLAGS))
+  endif
+endif
+
 SHLIB_LINK  += $(OPENSSL_LDFLAGS)
 
 # developer
