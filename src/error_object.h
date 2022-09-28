@@ -52,7 +52,6 @@ namespace pg_jsonapi
         char                source_param_[256];// - An optional string indicating which query parameter caused the error.
 
         bool                operation_;        // - internal control of errors related to operations
-        char                internal_[1024];   // - extra information to be serialized under meta
 
     private: // Methods
 

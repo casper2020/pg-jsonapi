@@ -34,7 +34,6 @@ pg_jsonapi::ErrorObject::ErrorObject ( int a_sqlerrcode, HttpStatusErrorCode a_s
      * Attribute defaults
      */
     source_param_[0] = '\0';
-    internal_[0] = '\0';
 }
 
 /**
@@ -55,7 +54,7 @@ pg_jsonapi::ErrorObject& pg_jsonapi::ErrorObject::SetMessage (const char* a_deta
 {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s %d", __FUNCTION__, status_)));
     va_list args;
-    size_t len = sizeof(internal_)-1;
+    char    internal_[1024];   // - extra information to be logged, we will not serialize because of SQL read injection
 
     if ( a_detail_message != NULL && strlen(a_detail_message) ) {
         detail_ = a_detail_message;
@@ -66,11 +65,13 @@ pg_jsonapi::ErrorObject& pg_jsonapi::ErrorObject::SetMessage (const char* a_deta
 
     if ( a_internal_msg_fmt ) {
         va_start(args, a_internal_msg_fmt);
-        vsnprintf(internal_, len, a_internal_msg_fmt, args);
+        vsnprintf(internal_, sizeof(internal_)-1, a_internal_msg_fmt, args);
         va_end(args);
+        ereport(LOG, (errmsg_internal("pg_jsonapi ERROR: %s - internal: %s - detail: %s", unpack_sql_state(sqlerrcode_), internal_, detail_.c_str())));
+    } else {
+        ereport(DEBUG2, (errmsg_internal("pg_jsonapi ERROR: %s - detail: %s", unpack_sql_state(sqlerrcode_), detail_.c_str())));
     }
 
-    ereport(DEBUG2, (errmsg_internal("pg_jsonapi ERROR %s - detail: %s - internal: %s", unpack_sql_state(sqlerrcode_), detail_.c_str(), internal_)));
     return *this;
 }
 
@@ -90,7 +91,7 @@ pg_jsonapi::ErrorObject& pg_jsonapi::ErrorObject::SetSourceParam (const char* a_
     vsnprintf(source_param_, len, a_fmt, args);
     va_end(args);
 
-    ereport(DEBUG2, (errmsg_internal("pg_jsonapi ERROR %s - parameter: %s", unpack_sql_state(sqlerrcode_), source_param_)));
+    ereport(DEBUG2, (errmsg_internal("pg_jsonapi ERROR: %s - parameter: %s", unpack_sql_state(sqlerrcode_), source_param_)));
     return *this;
 }
 
@@ -123,21 +124,10 @@ void pg_jsonapi::ErrorObject::Serialize (StringInfoData& a_response, bool a_open
         }
         appendStringInfoString(&a_response, "}");
     }
-    if ( a_open_common_errors || strlen(internal_) > 0 ) {
-        const char* comma = "";
+    if ( a_open_common_errors ) {
         appendStringInfoString(&a_response, ",\"meta\":{");
-        if ( strlen(internal_) > 0 ) {
-            appendStringInfoString(&a_response, "\"internal-error\":");
-            escape_json(&a_response, internal_);
-            comma = ",";
-        }
-        if ( a_open_common_errors ) {
-            // leave common-errors array open, meta and error need to be closed later
-            appendStringInfo(&a_response, "%s\"common-errors\": [", comma);
-        } else {
-            // close meta and error
-            appendStringInfoString(&a_response, "}}");
-        }
+        // leave common-errors array open, meta and error need to be closed later
+        appendStringInfo(&a_response, "\"common-errors\": [");
     } else {
         // close error
         appendStringInfoChar(&a_response, '}');
