@@ -31,6 +31,7 @@ extern "C" {
 #include "query_builder.h"
 #include "utils_adt_json.h"
 #include <tuple>
+#include <regex>
 
 /**
  * @brief Constructor.
@@ -162,6 +163,23 @@ bool pg_jsonapi::QueryBuilder::IsValidHttpMethod (const std::string& a_method)
 {
     // ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
     return ( "GET" == a_method || "POST" == a_method || "PATCH" == a_method || "DELETE" == a_method );
+}
+
+bool pg_jsonapi::QueryBuilder::IsValidSQLCondition (const std::string& a_condition)
+{
+    ereport(DEBUG3, (errmsg_internal("jsonapi: %s checking: %s", __FUNCTION__, a_condition.c_str())));
+
+    std::smatch m;
+    std::string s = a_condition;
+    std::regex e ("(?:'[^']+'|;|\\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|EXECUTE|PG_\\w+)\\b)", std::regex_constants::ECMAScript|std::regex_constants::icase);
+    while (std::regex_search (s,m,e)) {
+        if ('\'' != m[0].str()[0] ) {
+            ereport(DEBUG1, (errmsg_internal("invalid condition: %s", m[0].str().c_str())));
+            return false;
+        }
+        s = m.suffix().str();
+    }
+    return true;
 }
 
 /**

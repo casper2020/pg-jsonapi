@@ -174,6 +174,7 @@ namespace pg_jsonapi
         void         SerializeResponse            (StringInfoData& a_response);
 
         static bool  IsValidHttpMethod            (const std::string& a_method);
+        static bool  IsValidSQLCondition          (const std::string& a_condition);
 
         /*
          * Attribute accessors

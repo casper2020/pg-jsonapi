@@ -67,7 +67,7 @@ pg_jsonapi::ErrorObject& pg_jsonapi::ErrorObject::SetMessage (const char* a_deta
         va_start(args, a_internal_msg_fmt);
         vsnprintf(internal_, sizeof(internal_)-1, a_internal_msg_fmt, args);
         va_end(args);
-        ereport(LOG, (errmsg_internal("pg_jsonapi ERROR: %s - internal: %s - detail: %s", unpack_sql_state(sqlerrcode_), internal_, detail_.c_str())));
+        ereport(WARNING, (errmsg_internal("pg_jsonapi ERROR: %s - internal: %s - detail: %s", unpack_sql_state(sqlerrcode_), internal_, detail_.c_str())));
     } else {
         ereport(DEBUG2, (errmsg_internal("pg_jsonapi ERROR: %s - detail: %s", unpack_sql_state(sqlerrcode_), detail_.c_str())));
     }
