@@ -171,7 +171,7 @@ bool pg_jsonapi::QueryBuilder::IsValidSQLCondition (const std::string& a_conditi
 
     std::smatch m;
     std::string s = a_condition;
-    std::regex e ("(?:'[^']+'|;|\\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|EXECUTE|PG_\\w+)\\b)", std::regex_constants::ECMAScript|std::regex_constants::icase);
+    std::regex e ("(?:'[^']+'|;|\\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|EXECUTE|PG_\\w+|current_database|current_setting|query_to_xml|version|lo_from_bytea|lo_put|lo_export|getpgusername)\\b)", std::regex_constants::ECMAScript|std::regex_constants::icase);
     while (std::regex_search (s,m,e)) {
         if ('\'' != m[0].str()[0] ) {
             ereport(DEBUG1, (errmsg_internal("invalid condition: %s", m[0].str().c_str())));
