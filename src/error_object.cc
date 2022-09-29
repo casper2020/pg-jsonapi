@@ -26,7 +26,7 @@
  *
  * @param a_status The HTTP status code
  */
-pg_jsonapi::ErrorObject::ErrorObject ( int a_sqlerrcode, HttpStatusErrorCode a_status, bool a_operation ) : sqlerrcode_(a_sqlerrcode), status_(a_status), operation_(a_operation)
+pg_jsonapi::ErrorObject::ErrorObject ( int a_sqlerrcode, unsigned int a_status, bool a_operation ) : sqlerrcode_(a_sqlerrcode), status_(a_status), operation_(a_operation)
 {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s %d", __FUNCTION__, status_)));
 

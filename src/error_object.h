@@ -43,7 +43,7 @@ namespace pg_jsonapi
 
     private: // Attributes
         int                 sqlerrcode_;       // - An application-specific error code, expressed as a string value. We are using PostgreSQL Error Codes.
-        HttpStatusErrorCode status_;           // - The HTTP status code applicable to this problem, expressed as a string value.
+        unsigned int status_;           // - The HTTP status code applicable to this problem, expressed as a string value.
         std::string         detail_;           // - A human-readable explanation specific to this occurrence of the problem.
         std::string         links_about_;      // - Links object containing a member about, that MAY lead to further details about this particular occurrence of the problem.
 
@@ -56,11 +56,11 @@ namespace pg_jsonapi
     private: // Methods
 
         const char*         Status     () const;
-        HttpStatusErrorCode StatusCode () const;
+        unsigned int StatusCode () const;
 
     public: // Methods
 
-        ErrorObject (int a_sqlerrcode, HttpStatusErrorCode a_status, bool a_operation);
+        ErrorObject (int a_sqlerrcode, unsigned int a_status, bool a_operation);
         virtual ~ErrorObject ();
 
         bool         IsOperation    () const;
@@ -73,11 +73,6 @@ namespace pg_jsonapi
     };
 
     typedef std::vector<ErrorObject>  ErrorVector;
-
-//    inline HttpStatusErrorCode ErrorObject::StatusCode ( ) const
-//    {
-//        return status_;
-//    }
 
     inline const char* ErrorObject::Status ( ) const
     {
