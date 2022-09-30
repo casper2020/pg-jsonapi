@@ -55,7 +55,7 @@ pg_jsonapi::OperationRequest::~OperationRequest ()
  *
  * @return @li ErrorObject the new error
  */
-pg_jsonapi::ErrorObject& pg_jsonapi::OperationRequest::AddError(int a_sqlerrcode, unsigned int a_status)
+pg_jsonapi::ErrorObject& pg_jsonapi::OperationRequest::AddError(int a_sqlerrcode, HttpStatusErrorCode a_status)
 {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
     pg_jsonapi::ErrorObject& e = g_qb->AddError(a_sqlerrcode, a_status, true);

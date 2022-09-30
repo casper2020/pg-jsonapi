@@ -29,12 +29,6 @@
 #include "resource_data.h"
 #include "utils_adt_json.h"
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
-#pragma clang diagnostic ignored "-Wsign-compare"
-#include "modsecurity/rules_set.h"
-#pragma clang diagnostic pop
-
 namespace pg_jsonapi
 {
     typedef enum {
@@ -67,12 +61,9 @@ namespace pg_jsonapi
         ErrorCode       errcodes_;
 
     private: // Resource Specification - initialized only once by base_url
-        DocumentConfigMap        config_map_;
-        DocumentConfig*          config_;      // specification for current request
-        StringSet                requested_urls_;
-        modsecurity::ModSecurity modsec_;
-        modsecurity::RulesSet    modsec_rules_set_;
-        bool                     modsec_initialized_;
+        DocumentConfigMap   config_map_;
+        DocumentConfig*     config_;      // specification for current request
+        StringSet           requested_urls_;
 
     private: // Attributes - request variables filled while parsing request
 
@@ -104,8 +95,6 @@ namespace pg_jsonapi
 
         OperationRequestVector rq_operations_;
 
-        modsecurity::Transaction* modsec_transaction_;
-
     private: // Attributes - used to query postgres and keep results
 
         bool            spi_connected_;
@@ -120,7 +109,7 @@ namespace pg_jsonapi
         uint            q_page_size_;
         uint            q_page_number_;
         ErrorVector     q_errors_;
-        unsigned int    q_http_status_;
+        HttpStatusCode  q_http_status_;
         const char*     q_json_function_data_;
         const char*     q_json_function_included_;
         bool            q_needs_search_path_;
@@ -159,7 +148,7 @@ namespace pg_jsonapi
         virtual ~QueryBuilder ();
 
         void         Clear ();
-        ErrorObject& AddError(int a_sqlerrcode, unsigned int a_status, bool a_operation = false);
+        ErrorObject& AddError(int a_sqlerrcode, HttpStatusErrorCode a_status, bool a_operation = false);
         void         SerializeCommonErrorItems    (StringInfoData& a_response);
 
 
@@ -187,8 +176,6 @@ namespace pg_jsonapi
         static bool  IsValidHttpMethod            (const std::string& a_method);
         static bool  IsValidSQLCondition          (const std::string& a_condition);
 
-        void         InitModSecurity (const std::string& a_config_file);
-
         /*
          * Attribute accessors
          */
@@ -196,7 +183,7 @@ namespace pg_jsonapi
         bool                  HasErrors()                   const;
         size_t                ErrorsSize()                  const;
         const ErrorObject&    GetError(size_t a_index)      const;
-        unsigned int          GetHttpStatus ()              const;
+        HttpStatusCode        GetHttpStatus ()              const;
         const DocumentConfig* GetDocumentConfig()           const;
         bool                  NeedsSearchPath()             const;
 
@@ -260,7 +247,7 @@ namespace pg_jsonapi
         return q_errors_[a_index];
     }
 
-    inline unsigned int QueryBuilder::GetHttpStatus () const
+    inline HttpStatusCode QueryBuilder::GetHttpStatus () const
     {
         return q_http_status_;
     }

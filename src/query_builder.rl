@@ -63,8 +63,6 @@ pg_jsonapi::QueryBuilder::QueryBuilder ()
     q_json_function_data_ = NULL;
     q_json_function_included_ = NULL;
     q_needs_search_path_ = false;
-    modsec_initialized_ = false;
-    modsec_transaction_ = nullptr;
 }
 
 /**
@@ -76,9 +74,6 @@ pg_jsonapi::QueryBuilder::~QueryBuilder ()
     /*
      * delete contained objects
      */
-     if ( nullptr != modsec_transaction_ ) {
-        delete modsec_transaction_;
-     }
 }
 
 /**
@@ -123,10 +118,6 @@ void pg_jsonapi::QueryBuilder::Clear ()
     rq_page_size_param_ = -1; // undefined
     rq_page_number_param_ = -1; // undefined
     rq_operations_.clear();
-    if ( nullptr != modsec_transaction_ ) {
-        delete modsec_transaction_;
-        modsec_transaction_ = nullptr;
-    }
 
     // Attributes - used to query postgres and keep results
     spi_connected_ = false;
@@ -155,12 +146,12 @@ void pg_jsonapi::QueryBuilder::Clear ()
  *
  * @return Reference for the new error.
  */
-pg_jsonapi::ErrorObject& pg_jsonapi::QueryBuilder::AddError(int a_sqlerrcode, unsigned int a_status, bool a_operation)
+pg_jsonapi::ErrorObject& pg_jsonapi::QueryBuilder::AddError(int a_sqlerrcode, HttpStatusErrorCode a_status, bool a_operation)
 {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
 
     if ( q_http_status_ < E_HTTP_ERROR_BAD_REQUEST ) {
-        q_http_status_ = a_status;
+        q_http_status_ = (HttpStatusCode)a_status;
     }
 
     ErrorObject error(a_sqlerrcode, a_status, a_operation);
@@ -172,19 +163,6 @@ bool pg_jsonapi::QueryBuilder::IsValidHttpMethod (const std::string& a_method)
 {
     // ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
     return ( "GET" == a_method || "POST" == a_method || "PATCH" == a_method || "DELETE" == a_method );
-}
-
-void pg_jsonapi::QueryBuilder::InitModSecurity (const std::string& a_config_file)
-{
-    if ( false == modsec_initialized_ ) {
-        ereport(INFO, (errmsg_internal("jsonapi: %s mod security: %s", __FUNCTION__, a_config_file.c_str())));
-        const int ret = modsec_rules_set_.loadFromUri(a_config_file.c_str());
-        if (ret < 0) {
-            ereport(FATAL, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("jsonapi: %s", modsec_rules_set_.getParserError().c_str())));
-        } else {
-            modsec_initialized_ = true;
-        }
-    }
 }
 
 bool pg_jsonapi::QueryBuilder::IsValidSQLCondition (const std::string& a_condition)
@@ -261,90 +239,6 @@ bool pg_jsonapi::QueryBuilder::ParseRequestArguments (const char* a_method, size
 
     if ( ! ParseRequestBody(a_body, a_body_len) ) {
         return false;
-    }
-
-    try {
-        
-        if ( nullptr != modsec_transaction_ ) {
-            delete modsec_transaction_;
-        }
-        modsec_transaction_ = new modsecurity::Transaction(&modsec_, &modsec_rules_set_, nullptr);
-        if ( nullptr == modsec_transaction_ ) {
-            ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("jsonapi: out of memory")));
-        }
-
-        // FAKE CONNECTION
-        if ( true != modsec_transaction_->processConnection("127.0.0.1", 12345, "127.0.0.1", 54321) ) {
-            AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "Unable process FAKE connection - mod security.");
-            return false;
-        }
-
-        // URL
-        if ( true != modsec_transaction_->processURI(rq_base_url_.c_str(), rq_method_.c_str(), "1.2") ) {
-            AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "URL is not valid - mod security.");
-            return false;
-        }
-
-        // BODY
-        if ( 0 != a_body_len ) {
-
-            modsecurity::ModSecurityIntervention intervention;
-            intervention.status     = 200;
-            intervention.url        = NULL;
-            intervention.log        = NULL;
-            intervention.disruptive = 0;
-
-            // HEADER
-            if ( true != modsec_transaction_->addRequestHeader("Content-Type", "application/json") ) {
-                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "Unable to add FAKE header - mod security.");
-                return false;
-            }
-            if ( modsec_transaction_->intervention(&intervention) > 0 ) {
-                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), intervention.status).SetMessage(NULL, "FAKE Header intervention failed - mod security.");
-                return false;
-            }
-
-            if ( true != modsec_transaction_->processRequestHeaders() ) {
-                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "Unable to process FAKE header - mod security.");
-                return false;
-            }            
-            if ( modsec_transaction_->intervention(&intervention) > 0 ) {
-                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), intervention.status).SetMessage(NULL, "Unacceptable FAKE HEADER - mod security.");
-                return false;
-            }
-
-            // BODY
-            if ( true != modsec_transaction_->appendRequestBody(reinterpret_cast<const unsigned char*>(a_body), a_body_len) ) {
-                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "Unable to append body - mod security.");
-                return false;
-            }
-            if ( modsec_transaction_->intervention(&intervention) > 0 ) {
-                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), intervention.status).SetMessage(NULL, "Body intervention failed - mod security.");
-                return false;
-            }
-            
-            if ( true != modsec_transaction_->processRequestBody() ) {
-                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "Process body failed - mod security.");
-                return false;
-            }
-            if ( modsec_transaction_->intervention(&intervention) > 0 ) {
-                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), intervention.status).SetMessage(NULL, "Unacceptable BODY - mod security.");
-                return false;
-            }
-            ereport(INFO, (errmsg_internal("jsonapi: %s intervention.status=%d", __FUNCTION__, intervention.status)));
-        }
-
-    } catch (...) {
-        const auto e = std::current_exception();
-        if ( e ) {
-            try {
-                std::rethrow_exception(e);
-            } catch(const std::exception& a_e) {
-                ereport(FATAL, (errcode(ERRCODE_INTERNAL_ERROR), errmsg("jsonapi: %s", a_e.what())));
-            }
-        } else {
-            ereport(FATAL, (errcode(ERRCODE_INTERNAL_ERROR), errmsg("jsonapi: generic exception caught")));
-        }
     }
 
     if ( a_accounting_schema_len ) {

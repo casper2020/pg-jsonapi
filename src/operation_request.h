@@ -87,7 +87,7 @@ namespace pg_jsonapi
         OperationRequest ();
         virtual ~OperationRequest ();
 
-        ErrorObject&       AddError(int a_sqlerrcode, unsigned int a_status);
+        ErrorObject&       AddError(int a_sqlerrcode, HttpStatusErrorCode a_status);
         void               SerializeErrors(StringInfoData& a_response);
 
         static void        AddQuotedStringToBuffer(std::string& a_buffer, const char* a_value, bool a_quote_value);

@@ -47,7 +47,7 @@ namespace pg_jsonapi
 
     typedef struct {
         const char              sqlerrcode_[5+1];
-        unsigned int            status_;
+        HttpStatusErrorCode     status_;
         const char*             message_;
     } ErrorCodeMessage;
 
@@ -58,7 +58,7 @@ namespace pg_jsonapi
     {
     public: // types
         typedef struct {
-            unsigned int       status_;
+            HttpStatusErrorCode     status_;
             const char*             message_;
         } ErrorCodeDetail;
 
@@ -74,7 +74,7 @@ namespace pg_jsonapi
     public: // Methods
 
         ErrorCodeDetail     GetDetail(int a_sqlerrcode)  const;
-        unsigned int        GetStatus(int a_sqlerrcode)  const;
+        HttpStatusErrorCode GetStatus(int a_sqlerrcode)  const;
         const char*         GetMessage(int a_sqlerrcode) const;
 
     };
@@ -90,7 +90,7 @@ namespace pg_jsonapi
         return it->second;
     }
 
-    inline unsigned int ErrorCode::GetStatus(int a_sqlerrcode) const
+    inline HttpStatusErrorCode ErrorCode::GetStatus(int a_sqlerrcode) const
     {
         ErrorCodeDetailMap::iterator it = sql_error_map_.find(a_sqlerrcode);
         if ( sql_error_map_.end() == it ) {
