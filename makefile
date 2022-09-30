@@ -87,9 +87,12 @@ ifeq (Darwin,$(PLATFORM))
     OPENSSL_DIR:=/Applications/casper.app/Contents/MacOS/openssl/lib
   endif
   OPENSSL_LDFLAGS:=-L$(OPENSSL_DIR)
+  LIBMODSECURE_DIR:=../casper-packager/libmodsecurity/darwin/pkg/$(PRJ_ARCH)/$(TARGET)/libmodsecurity/usr/local/casper/libmodsecurity
+  LINK_FLAGS += -L$(LIBMODSECURE_DIR)/lib -Wl, -Bstatic -lmodsecurity -Wl, -Bdynamic
 else
   SO_NAME = $(LIB_NAME).so.$(LIB_VERSION)
   LINK_FLAGS += -Wl,-soname,$(SO_NAME) -Wl,-z,relro -Bsymbolic
+  LIBMODSECURE_DIR:=undefined
 endif
 $(shell sed -e s#@VERSION@#${LIB_VERSION}#g pg-jsonapi.control.tpl > pg-jsonapi.control)
 
@@ -111,7 +114,7 @@ OBJS=$(SRC_FILES:.cc=.o) $(RAGEL_FILES:.rl=.o)
 EXTENSION   := $(LIB_NAME)
 EXTVERSION  := $(LIB_VERSION)
 SHLIB_LINK  := -lstdc++ $(LINK_FLAGS)
-PG_CPPFLAGS := -fPIC $(CFLAGS) $(CXXFLAGS) $(OTHER_CFLAGS) $(ARCH_CFLAGS)
+PG_CPPFLAGS := -fPIC $(CFLAGS) $(CXXFLAGS) $(OTHER_CFLAGS) $(ARCH_CFLAGS) -I$(LIBMODSECURE_DIR)/include
 MODULE_big  := $(LIB_NAME)
 PG_CONFIG   ?= pg_config
 EXTRA_CLEAN := $(RAGEL_FILES:.rl=.cc) $(LIB_NAME).so*
@@ -139,6 +142,10 @@ dev:
 so:
 	@echo "* $(PLATFORM) $(TARGET) $(PRJ_ARCH) rebuild..."
 	@make -f makefile clean all
+
+# rpath
+rpath:
+	@echo "* $(PLATFORM) $(TARGET) $(PRJ_ARCH) NO rpath..."
 
 # debug
 debug:

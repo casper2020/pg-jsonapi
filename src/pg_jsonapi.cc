@@ -70,6 +70,11 @@ void jsonapi_initqb()
         }
         ereport(DEBUG3, (errmsg_internal("jsonapi: %s g_qb=%p", __FUNCTION__, g_qb)));
     }
+    try {
+        g_qb->InitModSecurity(config_file);
+    } catch (...) {
+        ereport(FATAL, (errcode(ERRCODE_INTERNAL_ERROR), errmsg("jsonapi: Unable to load %s", config_file.c_str())));
+    }
 }
 
 /**
