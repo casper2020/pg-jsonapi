@@ -34,6 +34,7 @@ pg_jsonapi::ErrorObject::ErrorObject ( int a_sqlerrcode, HttpStatusErrorCode a_s
      * Attribute defaults
      */
     source_param_[0] = '\0';
+    internal_[0] = '\0';
 }
 
 /**
@@ -54,7 +55,6 @@ pg_jsonapi::ErrorObject& pg_jsonapi::ErrorObject::SetMessage (const char* a_deta
 {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s %d", __FUNCTION__, status_)));
     va_list args;
-    char    internal_[1024];   // - extra information to be logged, we will not serialize because of SQL read injection
 
     if ( a_detail_message != NULL && strlen(a_detail_message) ) {
         detail_ = a_detail_message;
@@ -124,10 +124,31 @@ void pg_jsonapi::ErrorObject::Serialize (StringInfoData& a_response, bool a_open
         }
         appendStringInfoString(&a_response, "}");
     }
-    if ( a_open_common_errors ) {
+
+    const char* comma = "";
+    bool has_meta = a_open_common_errors;
+#ifdef DEVELOPER_MODE
+    if ( strlen(internal_) > 0 ) {
+	has_meta = true;
+    }
+#endif
+    if ( has_meta ) {
         appendStringInfoString(&a_response, ",\"meta\":{");
-        // leave common-errors array open, meta and error need to be closed later
-        appendStringInfo(&a_response, "\"common-errors\": [");
+#ifdef DEVELOPER_MODE
+        if ( strlen(internal_) > 0 ) {
+            appendStringInfoString(&a_response, "\"internal-error\":");
+            escape_json(&a_response, internal_);
+            comma = ",";
+        }
+#endif
+        if ( a_open_common_errors ) {
+            // leave common-errors array open, meta and error need to be closed later
+            appendStringInfo(&a_response, "%s\"common-errors\": [", comma);
+        }
+        if ( !a_open_common_errors ) {
+            // close meta and error
+            appendStringInfoString(&a_response, "}}");
+        }
     } else {
         // close error
         appendStringInfoChar(&a_response, '}');

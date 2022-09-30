@@ -71,12 +71,13 @@ endif
 
 LIB_NAME:= pg-jsonapi
 ifndef LIB_VERSION
-	LIB_VERSION := 2.5.4
+	LIB_VERSION := 2.5.5
 endif
 
 include settings.mk
 
 ifeq (Darwin,$(PLATFORM))
+  CFLAGS+= -DDEVELOPER_MODE=1
   ARCH_CFLAGS=-arch $(PRJ_ARCH)
   ARCH_CXXFLAGS=-arch $(PRJ_ARCH)
   ARCH_LDFLAGS=-m64 -arch $(PRJ_ARCH)
