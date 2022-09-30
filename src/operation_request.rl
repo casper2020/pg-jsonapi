@@ -476,7 +476,7 @@ void pg_jsonapi::OperationRequest::AddQuotedStringToBuffer(std::string& a_buffer
 {
     if ( a_validate_no_html ) {
         std::smatch m;
-        std::regex e ("(?:<\\w+[^>]*>)", std::regex_constants::ECMAScript);
+        std::regex e ("(?:<\\s*\\w+[^>]*>|<\\s*\\w+[^>]*\\w+\\s*\\([^)]+\\))", std::regex_constants::ECMAScript);
         while (std::regex_search (std::string(a_value),m,e)) {
             ereport(DEBUG1, (errmsg_internal("invalid value: [%s] on: %s", m[0].str().c_str(), a_value)));
             g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value: [%s]", a_value);
