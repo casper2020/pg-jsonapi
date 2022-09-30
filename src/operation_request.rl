@@ -19,6 +19,7 @@
  * along with pg-jsonapi.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <regex>
 #include "operation_request.h"
 
 #include "query_builder.h"
@@ -387,7 +388,7 @@ void pg_jsonapi::OperationRequest::GetArrayAsSQLValue(const JsonapiJson::Value& 
     for ( JsonapiJson::ArrayIndex i = 0; i < a_value.size(); i++ ) {
         a_sql_value += sep;
         a_sql_value += '"';
-        AddQuotedStringToBuffer(a_sql_value, a_value[i].asString().c_str(), false);
+        AddQuotedStringToBuffer(a_sql_value, a_value[i].asString().c_str(), /*quote*/ false, /*no_html*/ true);
         a_sql_value += '"';
         sep = ",";
     }
@@ -411,7 +412,7 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceInsertCmd()
     if ( (*rq_body_data_).isMember("id") ) {
         q_buffer_ += " (" + rc.GetPGQueryColId();
         values += " VALUES (";
-        AddQuotedStringToBuffer(values, (*rq_body_data_)["id"].asString().c_str(), true);
+        AddQuotedStringToBuffer(values, (*rq_body_data_)["id"].asString().c_str(), /*quote*/ true, /*no_html*/ true);
     }
 
     const JsonapiJson::Value::Members& attrs = (*rq_body_data_)["attributes"].getMemberNames();
@@ -426,7 +427,7 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceInsertCmd()
         q_buffer_ += rc.GetPGQueryColumn(*key);
 
         if ( (*rq_body_data_)["attributes"][*key].isString() ) {
-            AddQuotedStringToBuffer(values, (*rq_body_data_)["attributes"][*key].asString().c_str(), true);
+            AddQuotedStringToBuffer(values, (*rq_body_data_)["attributes"][*key].asString().c_str(), /*quote*/ true, /*no_html*/ true);
         } else if ( (*rq_body_data_)["attributes"][*key].isNull() ) {
             values += "NULL";
         } else if (      (*rq_body_data_)["attributes"][*key].isArray()
@@ -453,7 +454,7 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceInsertCmd()
                 values    += ",";
             }
             q_buffer_ += rc.GetPGQueryColumn(*key);
-            AddQuotedStringToBuffer(values, (*rq_body_data_)["relationships"][*key]["data"]["id"].asString().c_str(), true);
+            AddQuotedStringToBuffer(values, (*rq_body_data_)["relationships"][*key]["data"]["id"].asString().c_str(), /*quote*/ true, /*no_html*/ false);
         }
     }
 //#warning TODO "relationships that are NOT in same table"
@@ -471,8 +472,19 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceInsertCmd()
 /**
  * @brief Add a quoted String to the query buffer
  */
-void pg_jsonapi::OperationRequest::AddQuotedStringToBuffer(std::string& a_buffer, const char* a_value, bool a_quote_value)
+void pg_jsonapi::OperationRequest::AddQuotedStringToBuffer(std::string& a_buffer, const char* a_value, bool a_quote_value, bool a_validate_no_html)
 {
+    if ( a_validate_no_html ) {
+        std::smatch m;
+        std::regex e ("(?:<\\w+[^>]*>)", std::regex_constants::ECMAScript);
+        while (std::regex_search (std::string(a_value),m,e)) {
+            ereport(DEBUG1, (errmsg_internal("invalid value: [%s] on: %s", m[0].str().c_str(), a_value)));
+            g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value: [%s]", a_value);
+            a_buffer += " INVALID VALUE ";
+            return;
+        }
+    }
+
     if ( a_quote_value ) {
         a_buffer += '\'';
     }
@@ -514,7 +526,7 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceUpdateCmd()
 
         q_buffer_ += rc.GetPGQueryColumn(*key) + "=";
         if ( (*rq_body_data_)["attributes"][*key].isString() ) {
-            AddQuotedStringToBuffer(q_buffer_, (*rq_body_data_)["attributes"][*key].asString().c_str(), true);
+            AddQuotedStringToBuffer(q_buffer_, (*rq_body_data_)["attributes"][*key].asString().c_str(), /*quote*/ true, /*no_html*/ true);
         } else if ( (*rq_body_data_)["attributes"][*key].isNull() ) {
             q_buffer_ += "NULL";
         } else if (      (*rq_body_data_)["attributes"][*key].isArray()
@@ -540,7 +552,7 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceUpdateCmd()
                 q_buffer_ += ",";
             }
             q_buffer_ += rc.GetPGQueryColumn(*key) + "=";
-            AddQuotedStringToBuffer(q_buffer_, (*rq_body_data_)["relationships"][*key]["data"]["id"].asString().c_str(), true);
+            AddQuotedStringToBuffer(q_buffer_, (*rq_body_data_)["relationships"][*key]["data"]["id"].asString().c_str(), /*quote*/ true, /*no_html*/ false);
         }
     }
     q_buffer_ += " WHERE ";
@@ -589,7 +601,7 @@ const std::string& pg_jsonapi::OperationRequest::GetFieldUpdateCmd (const std::s
         q_buffer_ += " SET " + a_field + " = NULL";
     } else {
         q_buffer_ += " SET " + a_field + " = ";
-        AddQuotedStringToBuffer(q_buffer_, a_value, true);
+        AddQuotedStringToBuffer(q_buffer_, a_value, /*quote*/ true, /*no_html*/ true);
     }
 
     q_buffer_ += " WHERE ";

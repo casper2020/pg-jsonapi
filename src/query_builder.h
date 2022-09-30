@@ -175,6 +175,7 @@ namespace pg_jsonapi
 
         static bool  IsValidHttpMethod            (const std::string& a_method);
         static bool  IsValidSQLCondition          (const std::string& a_condition);
+        static bool  IsValidNoHTMLString          (const std::string& a_text);
 
         /*
          * Attribute accessors

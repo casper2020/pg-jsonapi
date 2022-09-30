@@ -1016,6 +1016,10 @@ bool pg_jsonapi::QueryBuilder::SPIExecuteCommand (const std::string& a_command, 
     MemoryContext  curContext = CurrentMemoryContext;
     int ret = 0;
 
+    if ( HasErrors() ) {
+        return false;
+    }
+
     PG_TRY();
     {
         ret = SPI_execute(a_command.c_str(), (spi_read_only_ && SPI_OK_UTILITY != a_expected_ret), 0);
@@ -1058,7 +1062,7 @@ void pg_jsonapi::QueryBuilder::AddInClause (const std::string& a_column, StringS
         q_buffer_ += a_column + " IN (";
         for ( StringSet::const_iterator val = a_values.begin(); val != a_values.end(); ++val ) {
             q_buffer_ += comma;
-            OperationRequest::AddQuotedStringToBuffer(q_buffer_, (*val).c_str(), true);
+            OperationRequest::AddQuotedStringToBuffer(q_buffer_, (*val).c_str(), /*quote*/ true, /*no_html*/ false);
             comma = ",";
         }
         q_buffer_ += ")";
@@ -1128,7 +1132,7 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
             } else {
                 if ( rc.IsQueryFromFunction() ) {
                     q_buffer_ += condition_start + rc.GetPGFunctionArgFilter() + condition_operator;
-                    OperationRequest::AddQuotedStringToBuffer(q_buffer_, rq_filter_param_.c_str(), true);
+                    OperationRequest::AddQuotedStringToBuffer(q_buffer_, rq_filter_param_.c_str(), /*quote*/ true, /*no_html*/ true);
                 } else {
                     q_buffer_ += condition_start + "(" + rq_filter_param_ + ")";
                 }
@@ -1154,7 +1158,7 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
                     q_buffer_ += " := NULL";
                 } else {
                     q_buffer_ += condition_operator;
-                    OperationRequest::AddQuotedStringToBuffer(q_buffer_, res->second.c_str(), true);
+                    OperationRequest::AddQuotedStringToBuffer(q_buffer_, res->second.c_str(), /*quote*/ true, /*no_html*/ true);
                 }
             } else {
                 GetFilterTableByFieldCondition (rc.GetType(), res->first, res->second);
@@ -1165,7 +1169,7 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
 
     if ( IsIndividual() ) {
         q_buffer_ += condition_start + rc.GetPGFunctionArgColId() + condition_operator;
-        OperationRequest::AddQuotedStringToBuffer(q_buffer_, GetResourceId().c_str(), true);
+        OperationRequest::AddQuotedStringToBuffer(q_buffer_, GetResourceId().c_str(), /*quote*/ true, /*no_html*/ false);
     } else {
         q_required_count_ = 0;
     }
@@ -2043,7 +2047,7 @@ const std::string& pg_jsonapi::QueryBuilder::GetFilterTableByFieldCondition (con
             q_buffer_ += " IS NULL";
         } else {
             q_buffer_ += " = ";
-            OperationRequest::AddQuotedStringToBuffer(q_buffer_, a_value.c_str(), true);
+            OperationRequest::AddQuotedStringToBuffer(q_buffer_, a_value.c_str(), /*quote*/ true, /*no_html*/ false);
         }
         q_buffer_ += " ) ";
     } else {
@@ -2056,7 +2060,7 @@ const std::string& pg_jsonapi::QueryBuilder::GetFilterTableByFieldCondition (con
             q_buffer_ += " IS NULL";
         } else {
             q_buffer_ += " = ";
-            OperationRequest::AddQuotedStringToBuffer(q_buffer_, a_value.c_str(), true);
+            OperationRequest::AddQuotedStringToBuffer(q_buffer_, a_value.c_str(), /*quote*/ true, /*no_html*/ false);
         }
     }
 
