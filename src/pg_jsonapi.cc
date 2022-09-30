@@ -70,6 +70,7 @@ void jsonapi_initqb()
         }
         ereport(DEBUG3, (errmsg_internal("jsonapi: %s g_qb=%p", __FUNCTION__, g_qb)));
     }
+    std::string config_file = "/etc/pg-jsonapi/modsec_includes.conf";
     try {
         g_qb->InitModSecurity(config_file);
     } catch (...) {
