@@ -24,6 +24,7 @@
 
 #include <stdlib.h>
 #include <string>
+#include <regex>
 #include "document_config.h"
 #include "operation_request.h"
 #include "resource_data.h"
@@ -64,6 +65,11 @@ namespace pg_jsonapi
         DocumentConfigMap   config_map_;
         DocumentConfig*     config_;      // specification for current request
         StringSet           requested_urls_;
+
+    private: // DB Configuration - initialized once by process
+        bool                    inited_validators_;
+        std::vector<std::regex> xss_validators_;
+        std::vector<std::regex> sql_validators_;
 
     private: // Attributes - request variables filled while parsing request
 
@@ -142,6 +148,8 @@ namespace pg_jsonapi
         void               SerializeIncluded           (StringInfoData& a_response);
         void               SerializeErrors             (StringInfoData& a_response);
 
+        bool               InitValidatorsFromPGConfig  ();
+
     public: // Methods
 
         QueryBuilder ();
@@ -173,9 +181,10 @@ namespace pg_jsonapi
         void         RequestOperationResponseData (const std::string& a_type, const std::string& a_id);
         void         SerializeResponse            (StringInfoData& a_response);
 
+        bool         IsValidUsingXssValidators    (const char* a_value);
+        bool         IsValidUsingSqlValidators    (const std::string& a_condition);
+
         static bool  IsValidHttpMethod            (const std::string& a_method);
-        static bool  IsValidSQLCondition          (const std::string& a_condition);
-        static bool  IsValidNoHTMLString          (const std::string& a_text);
 
         /*
          * Attribute accessors

@@ -41,6 +41,7 @@ pg_jsonapi::QueryBuilder::QueryBuilder ()
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
 
     config_ = NULL;
+    inited_validators_ = false;
 
     rq_method_ = "GET";
     rq_extension_ = E_EXT_NONE;
@@ -163,23 +164,6 @@ bool pg_jsonapi::QueryBuilder::IsValidHttpMethod (const std::string& a_method)
 {
     // ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
     return ( "GET" == a_method || "POST" == a_method || "PATCH" == a_method || "DELETE" == a_method );
-}
-
-bool pg_jsonapi::QueryBuilder::IsValidSQLCondition (const std::string& a_condition)
-{
-    ereport(DEBUG3, (errmsg_internal("jsonapi: %s checking: %s", __FUNCTION__, a_condition.c_str())));
-
-    std::smatch m;
-    std::string s = a_condition;
-    std::regex e ("(?:'[^']+'|;|\\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|EXECUTE|PG_\\w+|current_database|current_setting|query_to_xml|version|lo_from_bytea|lo_put|lo_export|getpgusername)\\b)", std::regex_constants::ECMAScript|std::regex_constants::icase);
-    while (std::regex_search (s,m,e)) {
-        if ('\'' != m[0].str()[0] ) {
-            ereport(DEBUG1, (errmsg_internal("invalid condition: %s", m[0].str().c_str())));
-            return false;
-        }
-        s = m.suffix().str();
-    }
-    return true;
 }
 
 /**
@@ -437,7 +421,7 @@ bool pg_jsonapi::QueryBuilder::ParseRequestBody (const char* a_body, size_t a_bo
 }
 
 /**
- * @brief Validate the request agains the document configuration.
+ * @brief Validate the request against the document configuration.
  *
  * @return @li true if parsing succeeds
  *         @li false if an error occurs
@@ -445,6 +429,13 @@ bool pg_jsonapi::QueryBuilder::ParseRequestBody (const char* a_body, size_t a_bo
 bool pg_jsonapi::QueryBuilder::ValidateRequest()
 {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
+
+    if ( !inited_validators_ ) {
+        inited_validators_ = true;
+        if ( !InitValidatorsFromPGConfig() ) {
+            return false;
+        }
+    }
 
     std::map<std::string, pg_jsonapi::DocumentConfig>::iterator it = config_map_.find(rq_base_url_);
     if ( config_map_.end() == it  ) {
@@ -2078,4 +2069,112 @@ void pg_jsonapi::QueryBuilder::RequestOperationResponseData (const std::string& 
         q_to_be_included_[a_type].insert(a_id);
     }
     return;
+}
+
+
+bool pg_jsonapi::QueryBuilder::InitValidatorsFromPGConfig ()
+{
+    JsonapiJson::Reader reader(JsonapiJson::Features::all());
+    JsonapiJson::Value  validators_root;
+
+    if ( SPIExecuteCommand("SELECT current_setting('cloudware.xss_validators', TRUE)", SPI_OK_SELECT) ) {
+        if ( 0 == SPI_processed ) {
+            ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: no xss_validators on DB configuration", LIB_VERSION)));
+            return true; // xss_validators are not mandatory
+        } else {
+            char* config_s = SPI_getvalue(SPI_tuptable->vals[0], SPI_tuptable->tupdesc, 1);
+            if ( NULL == config_s || 0 == strlen(config_s) ) {
+                ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: empty configuration of xss_validators on DB configuration", LIB_VERSION)));
+                return true;
+            }
+
+            if (   ! reader.parse(config_s, config_s + strlen(config_s), validators_root, false)
+                || ! ( validators_root.isArray() ) ) {
+                ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: IGNORING invalid configuration of xss_validators on DB configuration, expected array of strings but configuration is: %s", LIB_VERSION, config_s)));
+                return false;
+            }
+
+            ereport(INFO, (errmsg_internal("jsonapi [libversion %s]: checking %u xss_validators from DB configuration", LIB_VERSION, validators_root.size())));
+            xss_validators_.reserve(validators_root.size());
+            for ( uint32_t i = 0; i < validators_root.size(); i++ ) {
+                if ( ! validators_root[i].isString() ) {
+                    ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: IGNORING invalid string on xss_validators on DB configuration, invalid string on array index [%d]", LIB_VERSION, i)));
+                } else {
+                    ereport(INFO, (errmsg_internal("jsonapi [libversion %s]: xss_validators[%d]: %s", LIB_VERSION, i, validators_root[i].asString().c_str())));
+                    xss_validators_.push_back(std::regex(validators_root[i].asString(), std::regex_constants::ECMAScript|std::regex_constants::icase));
+                }
+            }
+        }
+    }
+
+    if ( SPIExecuteCommand("SELECT current_setting('cloudware.sql_validators', TRUE)", SPI_OK_SELECT) ) {
+        if ( 0 == SPI_processed ) {
+            ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: no sql_validators on DB configuration", LIB_VERSION)));
+            return true; // sql_validators are not mandatory
+        } else {
+            char* config_s = SPI_getvalue(SPI_tuptable->vals[0], SPI_tuptable->tupdesc, 1);
+            if ( NULL == config_s || 0 == strlen(config_s) ) {
+                ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: empty configuration of sql_validators on DB configuration", LIB_VERSION)));
+                return true;
+            }
+
+            if (   ! reader.parse(config_s, config_s + strlen(config_s), validators_root, false)
+                || ! ( validators_root.isArray() ) ) {
+                ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: IGNORING invalid configuration of sql_validators on DB configuration, expected array of strings but configuration is: %s", LIB_VERSION, config_s)));
+                return false;
+            }
+
+            ereport(INFO, (errmsg_internal("jsonapi [libversion %s]: checking %u sql_validators from DB configuration", LIB_VERSION, validators_root.size())));
+            sql_validators_.reserve(validators_root.size());
+            for ( uint32_t i = 0; i < validators_root.size(); i++ ) {
+                if ( ! validators_root[i].isString() ) {
+                    ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: IGNORING invalid string on sql_validators on DB configuration, invalid string on array index [%d]", LIB_VERSION, i)));
+                } else {
+                    ereport(INFO, (errmsg_internal("jsonapi [libversion %s]: sql_validators[%d]: %s", LIB_VERSION, i, validators_root[i].asString().c_str())));
+                    sql_validators_.push_back(std::regex("(?:'[^']+'|"+validators_root[i].asString()+")", std::regex_constants::ECMAScript|std::regex_constants::icase));
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+bool pg_jsonapi::QueryBuilder::IsValidUsingXssValidators(const char* a_value)
+{
+    ereport(DEBUG3, (errmsg_internal("jsonapi: %s a_value:%s", __FUNCTION__, a_value)));
+    if ( xss_validators_.size() > 0 ) {
+        const std::string value = std::string(a_value);
+        std::smatch m;
+        for ( size_t i = 0; i < xss_validators_.size(); i++ ) {
+            ereport(DEBUG4, (errmsg_internal("checking against rule on xss_validators[%zu]", i)));
+            while (std::regex_search(value, m, xss_validators_[i]) ) {
+                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value (matched xss_validators[%zu]): [%s]", i, a_value);
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool pg_jsonapi::QueryBuilder::IsValidUsingSqlValidators (const std::string& a_condition)
+{
+    ereport(DEBUG3, (errmsg_internal("jsonapi: %s a_condition:%s", __FUNCTION__, a_condition.c_str())));
+    if ( sql_validators_.size() > 0 ) {
+        std::string value = std::string(a_condition);
+        std::smatch m;
+        for ( size_t i = 0; i < sql_validators_.size(); i++ ) {
+            ereport(DEBUG4, (errmsg_internal("checking against rule on sql_validators[%zu]", i)));
+            while (std::regex_search(value, m, sql_validators_[i]) ) {
+                if ('\'' != m[0].str()[0] ) {
+                    AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid condition (matched sql_validators[%zu]): [%s]", i, a_condition.c_str());
+                    return false;
+                }
+                value = m.suffix().str();
+            }
+        }
+    }
+
+    return true;
 }

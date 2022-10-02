@@ -19,7 +19,6 @@
  * along with pg-jsonapi.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <regex>
 #include "operation_request.h"
 
 #include "query_builder.h"
@@ -474,18 +473,10 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceInsertCmd()
  */
 void pg_jsonapi::OperationRequest::AddQuotedStringToBuffer(std::string& a_buffer, const char* a_value, bool a_quote_value, bool a_validate_no_html)
 {
-    if ( a_validate_no_html ) {
-        const std::string value = std::string(a_value);
-        std::smatch m;
-        std::regex e ("(?:<\\s*\\w+[^>]*>|<\\s*\\w+[^>]*\\w+\\s*\\([^)]+\\))", std::regex_constants::ECMAScript);
-        while (std::regex_search(value, m, e) ) {
-            ereport(DEBUG1, (errmsg_internal("invalid value: [%s] on: %s", m[0].str().c_str(), a_value)));
-            g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value: [%s]", a_value);
-            a_buffer += " INVALID VALUE ";
-            return;
-        }
+    if ( a_validate_no_html && !g_qb->IsValidUsingXssValidators(a_value) ) {
+        a_buffer += " INVALID VALUE ";
+        return;
     }
-
     if ( a_quote_value ) {
         a_buffer += '\'';
     }
