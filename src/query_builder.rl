@@ -497,6 +497,11 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
         }
     }
 
+    if ( !rq_filter_param_.empty() && ! IsValidUsingSqlValidators(rq_filter_param_) ) {
+        ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "filter param (without field) is not a valid SQL condition, decoded filter: %s", rq_filter_param_.c_str());
+        e.SetSourceParam("filter=%s", rq_filter_param_.c_str());
+    }
+
     if ( ! IsTopQueryFromJobTube() ) {
 
         if ( IsTopQueryFromFunction() ) {

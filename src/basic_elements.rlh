@@ -172,13 +172,6 @@
                     rq_filter_param_ += *(src);
                 }
             }
-
-            ereport(DEBUG3, (errmsg_internal("pg_jsonapi rq_filter_param_: %s", rq_filter_param_.c_str())));
-            if ( ! IsValidUsingSqlValidators(rq_filter_param_) ) {
-                ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "filter param (without field) is not a valid SQL condition, decoded filter: %s", decoded_filter_.c_str());
-                e.SetSourceParam("filter");
-                return false;
-            }
         }
 
     }
