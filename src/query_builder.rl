@@ -2109,6 +2109,17 @@ bool pg_jsonapi::QueryBuilder::InitValidatorsFromPGConfig ()
                     xss_validators_.push_back(std::regex(validators_root[i].asString(), std::regex_constants::ECMAScript|std::regex_constants::icase));
                 }
             }
+            if ( xss_validators_.size() > 0 ) {
+                std::smatch m;
+                for ( size_t i = 0; i < xss_validators_.size(); i++ ) {
+                    std::string value = std::string("this must be a valid text");
+                    ereport(DEBUG4, (errmsg_internal("checking value [%s] against rule on xss_validators[%zu]", value.c_str(), i)));
+                    while (std::regex_search(value, m, xss_validators_[i]) ) {
+                        ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: xss_validators[%zu] matched test sample: %s", LIB_VERSION, i, value.c_str())));
+                        value = m.suffix().str();
+                    }
+                }
+            }
         }
     }
 
@@ -2139,6 +2150,19 @@ bool pg_jsonapi::QueryBuilder::InitValidatorsFromPGConfig ()
                     sql_validators_.push_back(std::regex("(?:'[^']+'|"+validators_root[i].asString()+")", std::regex_constants::ECMAScript|std::regex_constants::icase));
                 }
             }
+            if ( sql_validators_.size() > 0 ) {
+                std::smatch m;
+                for ( size_t i = 0; i < sql_validators_.size(); i++ ) {
+                    std::string value = std::string("'this must be a valid condition' <> 'ola' AND 2<4");
+                    ereport(DEBUG4, (errmsg_internal("checking value [%s] against rule on sql_validators[%zu]", value.c_str(), i)));
+                    while (std::regex_search(value, m, sql_validators_[i]) ) {
+                        if ('\'' != m[0].str()[0] ) {
+                            ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: sql_validators[%zu] matched test sample: %s", LIB_VERSION, i, value.c_str())));
+                        }
+                        value = m.suffix().str();
+                    }
+                }
+            }
         }
     }
 
@@ -2149,10 +2173,10 @@ bool pg_jsonapi::QueryBuilder::IsValidUsingXssValidators(const char* a_value)
 {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s a_value:%s", __FUNCTION__, a_value)));
     if ( xss_validators_.size() > 0 ) {
-        const std::string value = std::string(a_value);
         std::smatch m;
         for ( size_t i = 0; i < xss_validators_.size(); i++ ) {
-            ereport(DEBUG4, (errmsg_internal("checking against rule on xss_validators[%zu]", i)));
+            const std::string value = std::string(a_value);
+            ereport(DEBUG4, (errmsg_internal("checking value [%s] against rule on xss_validators[%zu]", value.c_str(), i)));
             while (std::regex_search(value, m, xss_validators_[i]) ) {
                 AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value (matched xss_validators[%zu]): [%s]", i, a_value);
                 return false;
@@ -2167,13 +2191,13 @@ bool pg_jsonapi::QueryBuilder::IsValidUsingSqlValidators (const std::string& a_c
 {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s a_condition:%s", __FUNCTION__, a_condition.c_str())));
     if ( sql_validators_.size() > 0 ) {
-        std::string value = std::string(a_condition);
         std::smatch m;
         for ( size_t i = 0; i < sql_validators_.size(); i++ ) {
-            ereport(DEBUG4, (errmsg_internal("checking against rule on sql_validators[%zu]", i)));
+            std::string value = std::string(a_condition);
+            ereport(DEBUG4, (errmsg_internal("checking value [%s] against rule on sql_validators[%zu]", value.c_str(), i)));
             while (std::regex_search(value, m, sql_validators_[i]) ) {
                 if ('\'' != m[0].str()[0] ) {
-                    AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid condition (matched sql_validators[%zu]): [%s]", i, a_condition.c_str());
+                    ereport(DEBUG1, (errmsg_internal("invalid condition (matched sql_validators[%zu]): [%s]", i, a_condition.c_str())));
                     return false;
                 }
                 value = m.suffix().str();
