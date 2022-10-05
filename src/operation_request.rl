@@ -159,6 +159,8 @@ bool pg_jsonapi::OperationRequest::ParsePath (std::string a_patch_path)
  */
 bool pg_jsonapi::OperationRequest::BodyHasValidResourceData()
 {
+    ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
+
     if (! (*rq_body_data_).isObject() ) {
         AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "resource value must be a valid jsonapi resource object");
         return false;
@@ -212,6 +214,25 @@ bool pg_jsonapi::OperationRequest::BodyHasValidAttributes(const JsonapiJson::Val
     if (   ! a_value.isObject() ) {
         AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value for attributes");
         return false;
+    }
+
+    const JsonapiJson::Value::Members& attrs = a_value.getMemberNames();
+    for ( JsonapiJson::Value::Members::const_iterator key = attrs.begin(); key != attrs.end(); ++key ) {
+        if ( a_value[*key].isString() ) {
+            if ( !g_qb->IsValidUsingXssValidators(a_value[*key].asString().c_str()) ){
+                return false;
+            }
+        } else if (      a_value[*key].isArray()
+                    &&   a_value[*key].size()
+                    && ! a_value[*key][0].isObject()
+                    && ! a_value[*key].isNull()
+                   ) {
+            for ( JsonapiJson::ArrayIndex i = 0; i < a_value.size(); i++ ) {
+                if ( !g_qb->IsValidUsingXssValidators(a_value[i].asString().c_str()) ){
+                    return false;
+                }
+            }
+        }
     }
 
     return true;
@@ -387,7 +408,7 @@ void pg_jsonapi::OperationRequest::GetArrayAsSQLValue(const JsonapiJson::Value& 
     for ( JsonapiJson::ArrayIndex i = 0; i < a_value.size(); i++ ) {
         a_sql_value += sep;
         a_sql_value += '"';
-        AddQuotedStringToBuffer(a_sql_value, a_value[i].asString().c_str(), /*quote*/ false, /*no_html*/ true);
+        AddQuotedStringToBuffer(a_sql_value, a_value[i].asString().c_str(), /*quote*/ false);
         a_sql_value += '"';
         sep = ",";
     }
@@ -411,7 +432,7 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceInsertCmd()
     if ( (*rq_body_data_).isMember("id") ) {
         q_buffer_ += " (" + rc.GetPGQueryColId();
         values += " VALUES (";
-        AddQuotedStringToBuffer(values, (*rq_body_data_)["id"].asString().c_str(), /*quote*/ true, /*no_html*/ true);
+        AddQuotedStringToBuffer(values, (*rq_body_data_)["id"].asString().c_str(), /*quote*/ true);
     }
 
     const JsonapiJson::Value::Members& attrs = (*rq_body_data_)["attributes"].getMemberNames();
@@ -426,7 +447,7 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceInsertCmd()
         q_buffer_ += rc.GetPGQueryColumn(*key);
 
         if ( (*rq_body_data_)["attributes"][*key].isString() ) {
-            AddQuotedStringToBuffer(values, (*rq_body_data_)["attributes"][*key].asString().c_str(), /*quote*/ true, /*no_html*/ true);
+            AddQuotedStringToBuffer(values, (*rq_body_data_)["attributes"][*key].asString().c_str(), /*quote*/ true);
         } else if ( (*rq_body_data_)["attributes"][*key].isNull() ) {
             values += "NULL";
         } else if (      (*rq_body_data_)["attributes"][*key].isArray()
@@ -453,7 +474,7 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceInsertCmd()
                 values    += ",";
             }
             q_buffer_ += rc.GetPGQueryColumn(*key);
-            AddQuotedStringToBuffer(values, (*rq_body_data_)["relationships"][*key]["data"]["id"].asString().c_str(), /*quote*/ true, /*no_html*/ false);
+            AddQuotedStringToBuffer(values, (*rq_body_data_)["relationships"][*key]["data"]["id"].asString().c_str(), /*quote*/ true);
         }
     }
 //#warning TODO "relationships that are NOT in same table"
@@ -471,12 +492,8 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceInsertCmd()
 /**
  * @brief Add a quoted String to the query buffer
  */
-void pg_jsonapi::OperationRequest::AddQuotedStringToBuffer(std::string& a_buffer, const char* a_value, bool a_quote_value, bool a_validate_no_html)
+void pg_jsonapi::OperationRequest::AddQuotedStringToBuffer(std::string& a_buffer, const char* a_value, bool a_quote_value)
 {
-    if ( a_validate_no_html && !g_qb->IsValidUsingXssValidators(a_value) ) {
-        a_buffer += " INVALID VALUE ";
-        return;
-    }
     if ( a_quote_value ) {
         a_buffer += '\'';
     }
@@ -518,7 +535,7 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceUpdateCmd()
 
         q_buffer_ += rc.GetPGQueryColumn(*key) + "=";
         if ( (*rq_body_data_)["attributes"][*key].isString() ) {
-            AddQuotedStringToBuffer(q_buffer_, (*rq_body_data_)["attributes"][*key].asString().c_str(), /*quote*/ true, /*no_html*/ true);
+            AddQuotedStringToBuffer(q_buffer_, (*rq_body_data_)["attributes"][*key].asString().c_str(), /*quote*/ true);
         } else if ( (*rq_body_data_)["attributes"][*key].isNull() ) {
             q_buffer_ += "NULL";
         } else if (      (*rq_body_data_)["attributes"][*key].isArray()
@@ -544,7 +561,7 @@ const std::string& pg_jsonapi::OperationRequest::GetResourceUpdateCmd()
                 q_buffer_ += ",";
             }
             q_buffer_ += rc.GetPGQueryColumn(*key) + "=";
-            AddQuotedStringToBuffer(q_buffer_, (*rq_body_data_)["relationships"][*key]["data"]["id"].asString().c_str(), /*quote*/ true, /*no_html*/ false);
+            AddQuotedStringToBuffer(q_buffer_, (*rq_body_data_)["relationships"][*key]["data"]["id"].asString().c_str(), /*quote*/ true);
         }
     }
     q_buffer_ += " WHERE ";
@@ -593,7 +610,7 @@ const std::string& pg_jsonapi::OperationRequest::GetFieldUpdateCmd (const std::s
         q_buffer_ += " SET " + a_field + " = NULL";
     } else {
         q_buffer_ += " SET " + a_field + " = ";
-        AddQuotedStringToBuffer(q_buffer_, a_value, /*quote*/ true, /*no_html*/ true);
+        AddQuotedStringToBuffer(q_buffer_, a_value, /*quote*/ true);
     }
 
     q_buffer_ += " WHERE ";

@@ -90,7 +90,7 @@ namespace pg_jsonapi
         ErrorObject&       AddError(int a_sqlerrcode, HttpStatusErrorCode a_status);
         void               SerializeErrors(StringInfoData& a_response);
 
-        static void        AddQuotedStringToBuffer(std::string& a_buffer, const char* a_value, bool a_quote_value, bool a_validate_no_html);
+        static void        AddQuotedStringToBuffer(std::string& a_buffer, const char* a_value, bool a_quote_value);
 
         void               SetRequestType(int a_index, OperationType a_type);
         bool               SetRequest(const JsonapiJson::Value* a_data, std::string a_path = std::string());

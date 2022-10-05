@@ -71,7 +71,7 @@ endif
 
 LIB_NAME:= pg-jsonapi
 ifndef LIB_VERSION
-	LIB_VERSION := 2.5.8
+	LIB_VERSION := 2.5.9
 endif
 
 include settings.mk
@@ -134,7 +134,7 @@ SHLIB_LINK  += $(OPENSSL_LDFLAGS)
 # developer
 dev:
 	xcodebuild -configuration Debug
-	sudo make install
+	make install
 
 # so
 so:

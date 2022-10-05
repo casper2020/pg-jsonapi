@@ -497,10 +497,7 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
         }
     }
 
-    if ( !rq_filter_param_.empty() && ! IsValidUsingSqlValidators(rq_filter_param_) ) {
-        ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "filter param (without field) is not a valid SQL condition, decoded filter: %s", rq_filter_param_.c_str());
-        e.SetSourceParam("filter=%s", rq_filter_param_.c_str());
-    }
+    ValidateFilterParam();
 
     if ( ! IsTopQueryFromJobTube() ) {
 
@@ -1058,7 +1055,7 @@ void pg_jsonapi::QueryBuilder::AddInClause (const std::string& a_column, StringS
         q_buffer_ += a_column + " IN (";
         for ( StringSet::const_iterator val = a_values.begin(); val != a_values.end(); ++val ) {
             q_buffer_ += comma;
-            OperationRequest::AddQuotedStringToBuffer(q_buffer_, (*val).c_str(), /*quote*/ true, /*no_html*/ false);
+            OperationRequest::AddQuotedStringToBuffer(q_buffer_, (*val).c_str(), /*quote*/ true);
             comma = ",";
         }
         q_buffer_ += ")";
@@ -1128,7 +1125,7 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
             } else {
                 if ( rc.IsQueryFromFunction() ) {
                     q_buffer_ += condition_start + rc.GetPGFunctionArgFilter() + condition_operator;
-                    OperationRequest::AddQuotedStringToBuffer(q_buffer_, rq_filter_param_.c_str(), /*quote*/ true, /*no_html*/ true);
+                    OperationRequest::AddQuotedStringToBuffer(q_buffer_, rq_filter_param_.c_str(), /*quote*/ true);
                 } else {
                     q_buffer_ += condition_start + "(" + rq_filter_param_ + ")";
                 }
@@ -1154,7 +1151,7 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
                     q_buffer_ += " := NULL";
                 } else {
                     q_buffer_ += condition_operator;
-                    OperationRequest::AddQuotedStringToBuffer(q_buffer_, res->second.c_str(), /*quote*/ true, /*no_html*/ true);
+                    OperationRequest::AddQuotedStringToBuffer(q_buffer_, res->second.c_str(), /*quote*/ true);
                 }
             } else {
                 GetFilterTableByFieldCondition (rc.GetType(), res->first, res->second);
@@ -1165,7 +1162,7 @@ const std::string& pg_jsonapi::QueryBuilder::GetTopQuery (bool a_count_rows, boo
 
     if ( IsIndividual() ) {
         q_buffer_ += condition_start + rc.GetPGFunctionArgColId() + condition_operator;
-        OperationRequest::AddQuotedStringToBuffer(q_buffer_, GetResourceId().c_str(), /*quote*/ true, /*no_html*/ false);
+        OperationRequest::AddQuotedStringToBuffer(q_buffer_, GetResourceId().c_str(), /*quote*/ true);
     } else {
         q_required_count_ = 0;
     }
@@ -2043,7 +2040,7 @@ const std::string& pg_jsonapi::QueryBuilder::GetFilterTableByFieldCondition (con
             q_buffer_ += " IS NULL";
         } else {
             q_buffer_ += " = ";
-            OperationRequest::AddQuotedStringToBuffer(q_buffer_, a_value.c_str(), /*quote*/ true, /*no_html*/ false);
+            OperationRequest::AddQuotedStringToBuffer(q_buffer_, a_value.c_str(), /*quote*/ true);
         }
         q_buffer_ += " ) ";
     } else {
@@ -2056,7 +2053,7 @@ const std::string& pg_jsonapi::QueryBuilder::GetFilterTableByFieldCondition (con
             q_buffer_ += " IS NULL";
         } else {
             q_buffer_ += " = ";
-            OperationRequest::AddQuotedStringToBuffer(q_buffer_, a_value.c_str(), /*quote*/ true, /*no_html*/ false);
+            OperationRequest::AddQuotedStringToBuffer(q_buffer_, a_value.c_str(), /*quote*/ true);
         }
     }
 
@@ -2171,14 +2168,14 @@ bool pg_jsonapi::QueryBuilder::InitValidatorsFromPGConfig ()
 
 bool pg_jsonapi::QueryBuilder::IsValidUsingXssValidators(const char* a_value)
 {
-    ereport(DEBUG3, (errmsg_internal("jsonapi: %s a_value:%s", __FUNCTION__, a_value)));
+    ereport(DEBUG4, (errmsg_internal("jsonapi: %s a_value:%s", __FUNCTION__, a_value)));
     if ( xss_validators_.size() > 0 ) {
         std::smatch m;
         for ( size_t i = 0; i < xss_validators_.size(); i++ ) {
             const std::string value = std::string(a_value);
             ereport(DEBUG4, (errmsg_internal("checking value [%s] against rule on xss_validators[%zu]", value.c_str(), i)));
             while (std::regex_search(value, m, xss_validators_[i]) ) {
-                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value (matched xss_validators[%zu]): [%s]", i, a_value);
+                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value (matched xss_validators[%zu]): %s", i, a_value);
                 return false;
             }
         }
@@ -2187,17 +2184,17 @@ bool pg_jsonapi::QueryBuilder::IsValidUsingXssValidators(const char* a_value)
     return true;
 }
 
-bool pg_jsonapi::QueryBuilder::IsValidUsingSqlValidators (const std::string& a_condition)
+bool pg_jsonapi::QueryBuilder::ValidateFilterParam ()
 {
-    ereport(DEBUG3, (errmsg_internal("jsonapi: %s a_condition:%s", __FUNCTION__, a_condition.c_str())));
-    if ( sql_validators_.size() > 0 ) {
+    ereport(DEBUG4, (errmsg_internal("jsonapi: %s rq_filter_param_:%s", __FUNCTION__, rq_filter_param_.c_str())));
+    if ( !rq_filter_param_.empty() && sql_validators_.size() > 0 ) {
         std::smatch m;
         for ( size_t i = 0; i < sql_validators_.size(); i++ ) {
-            std::string value = std::string(a_condition);
+            std::string value = std::string(rq_filter_param_);
             ereport(DEBUG4, (errmsg_internal("checking value [%s] against rule on sql_validators[%zu]", value.c_str(), i)));
             while (std::regex_search(value, m, sql_validators_[i]) ) {
                 if ('\'' != m[0].str()[0] ) {
-                    ereport(DEBUG1, (errmsg_internal("invalid condition (matched sql_validators[%zu]): [%s]", i, a_condition.c_str())));
+                    AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value (matched sql_validators[%zu]): %s", i, rq_filter_param_.c_str()).SetSourceParam("filter=%s", rq_filter_param_.c_str());
                     return false;
                 }
                 value = m.suffix().str();
