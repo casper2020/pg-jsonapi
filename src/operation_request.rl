@@ -227,8 +227,8 @@ bool pg_jsonapi::OperationRequest::BodyHasValidAttributes(const JsonapiJson::Val
                     && ! a_value[*key][0].isObject()
                     && ! a_value[*key].isNull()
                    ) {
-            for ( JsonapiJson::ArrayIndex i = 0; i < a_value.size(); i++ ) {
-                if ( !g_qb->IsValidUsingXssValidators(a_value[i].asString().c_str()) ){
+            for ( JsonapiJson::ArrayIndex i = 0; i < a_value[*key].size(); i++ ) {
+                if ( !g_qb->IsValidUsingXssValidators(a_value[*key][i].asString().c_str()) ){
                     return false;
                 }
             }
