@@ -2171,9 +2171,10 @@ bool pg_jsonapi::QueryBuilder::IsValidUsingXssValidators(const char* a_value)
 {
     ereport(DEBUG4, (errmsg_internal("jsonapi: %s a_value:%s", __FUNCTION__, a_value)));
     if ( xss_validators_.size() > 0 ) {
+        std::string decoded_filter_ = pg_jsonapi::Utils::urlDecode(a_value, strlen(a_value));
         std::smatch m;
         for ( size_t i = 0; i < xss_validators_.size(); i++ ) {
-            const std::string value = std::string(a_value);
+            const std::string value = std::string(decoded_filter_);
             ereport(DEBUG4, (errmsg_internal("checking value [%s] against rule on xss_validators[%zu]", value.c_str(), i)));
             while (std::regex_search(value, m, xss_validators_[i]) ) {
                 AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value (matched xss_validators[%zu]): %s", i, a_value);
