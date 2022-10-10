@@ -198,6 +198,13 @@ bool pg_jsonapi::QueryBuilder::ParseRequestArguments (const char* a_method, size
                                      (int)a_company_schema_len, a_company_schema,
                                      (int)a_accounting_prefix_len, a_accounting_prefix)));
 
+    if ( !inited_validators_ ) {
+        inited_validators_ = true;
+        if ( !InitValidatorsFromPGConfig() ) {
+            return false;
+        }
+    }
+
     JsonapiJson::Reader reader(JsonapiJson::Features::strictMode());
 
     if ( 0 == a_method_len )
@@ -430,13 +437,6 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
 {
     ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
 
-    if ( !inited_validators_ ) {
-        inited_validators_ = true;
-        if ( !InitValidatorsFromPGConfig() ) {
-            return false;
-        }
-    }
-
     std::map<std::string, pg_jsonapi::DocumentConfig>::iterator it = config_map_.find(rq_base_url_);
     if ( config_map_.end() == it  ) {
         bool config_exists = false;
@@ -505,7 +505,7 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
             if ( !rq_filter_param_.empty() && !TopFunctionSupportsFilter() ) {
                 ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "resource '%s' is configured as a call to function '%s' which does not support filter",
                                                                                                          GetResourceType().c_str(), config_->GetResource(GetResourceType()).GetPGQueryFunction().c_str());
-                e.SetSourceParam("filter=%s", rq_filter_param_.c_str());
+                e.SetSourceParam("filter=\\\"%s\\\"", rq_filter_param_.c_str());
             }
 
             if ( 0 == rq_filter_field_param_.count(GetFunctionArgAccountingSchema()) ) {
@@ -2076,6 +2076,7 @@ void pg_jsonapi::QueryBuilder::RequestOperationResponseData (const std::string& 
 
 bool pg_jsonapi::QueryBuilder::InitValidatorsFromPGConfig ()
 {
+    ereport(DEBUG4, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
     JsonapiJson::Reader reader(JsonapiJson::Features::all());
     JsonapiJson::Value  validators_root;
 
@@ -2194,7 +2195,7 @@ bool pg_jsonapi::QueryBuilder::ValidateFilterParam ()
             ereport(DEBUG4, (errmsg_internal("checking value [%s] against rule on sql_validators[%zu]", value.c_str(), i)));
             while (std::regex_search(value, m, sql_validators_[i]) ) {
                 if ('\'' != m[0].str()[0] ) {
-                    AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value (matched sql_validators[%zu]): %s", i, rq_filter_param_.c_str()).SetSourceParam("filter=%s", rq_filter_param_.c_str());
+                    AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value (matched sql_validators[%zu]): %s", i, rq_filter_param_.c_str()).SetSourceParam("filter=\\\"%s\\\"", rq_filter_param_.c_str());
                     return false;
                 }
                 value = m.suffix().str();
