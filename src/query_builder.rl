@@ -497,8 +497,6 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
         }
     }
 
-    ValidateFilterParam();
-
     if ( ! IsTopQueryFromJobTube() ) {
 
         if ( IsTopQueryFromFunction() ) {
@@ -2167,17 +2165,17 @@ bool pg_jsonapi::QueryBuilder::InitValidatorsFromPGConfig ()
     return true;
 }
 
-bool pg_jsonapi::QueryBuilder::IsValidUsingXssValidators(const char* a_value)
+bool pg_jsonapi::QueryBuilder::AttributeIsValidUsingXssValidators (const std::string& a_attribute, const std::string& a_value)
 {
-    ereport(DEBUG4, (errmsg_internal("jsonapi: %s a_value:%s", __FUNCTION__, a_value)));
+    ereport(DEBUG4, (errmsg_internal("jsonapi: %s attribute:%s a_value:%s", __FUNCTION__, a_attribute.c_str(), a_value.c_str())));
     if ( xss_validators_.size() > 0 ) {
-        std::string decoded_filter_ = pg_jsonapi::Utils::urlDecode(a_value, strlen(a_value));
+        std::string decoded_filter_ = pg_jsonapi::Utils::urlDecode(a_value.c_str(), a_value.length());
         std::smatch m;
         for ( size_t i = 0; i < xss_validators_.size(); i++ ) {
             const std::string value = std::string(decoded_filter_);
-            ereport(DEBUG4, (errmsg_internal("checking value [%s] against rule on xss_validators[%zu]", value.c_str(), i)));
+            ereport(DEBUG4, (errmsg_internal("checking decoded attribute \"%s\" [%s] against rule on xss_validators[%zu]", a_attribute.c_str(), value.c_str(), i)));
             while (std::regex_search(value, m, xss_validators_[i]) ) {
-                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value (matched xss_validators[%zu]): %s", i, a_value);
+                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "attribute \"%s\" has invalid value (matched xss_validators[%zu]): %s", a_attribute.c_str(), i, a_value.c_str());
                 return false;
             }
         }
@@ -2186,17 +2184,23 @@ bool pg_jsonapi::QueryBuilder::IsValidUsingXssValidators(const char* a_value)
     return true;
 }
 
-bool pg_jsonapi::QueryBuilder::ValidateFilterParam ()
+bool pg_jsonapi::QueryBuilder::FilterIsValidUsingSqlValidators (const char* a_field, const std::string& a_value)
 {
-    ereport(DEBUG4, (errmsg_internal("jsonapi: %s rq_filter_param_:%s", __FUNCTION__, rq_filter_param_.c_str())));
-    if ( !rq_filter_param_.empty() && sql_validators_.size() > 0 ) {
+    ereport(DEBUG4, (errmsg_internal("jsonapi: %s field:%s a_value:%s", __FUNCTION__, a_field, a_value.c_str())));
+    if ( sql_validators_.size() > 0 ) {
+        // URL decode was already made while parsing
         std::smatch m;
         for ( size_t i = 0; i < sql_validators_.size(); i++ ) {
-            std::string value = std::string(rq_filter_param_);
-            ereport(DEBUG4, (errmsg_internal("checking value [%s] against rule on sql_validators[%zu]", value.c_str(), i)));
+            std::string value = std::string(a_value);
+            ereport(DEBUG4, (errmsg_internal("checking filter [%s] against rule on sql_validators[%zu]", value.c_str(), i)));
             while (std::regex_search(value, m, sql_validators_[i]) ) {
                 if ('\'' != m[0].str()[0] ) {
-                    AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid value (matched sql_validators[%zu]): %s", i, rq_filter_param_.c_str()).SetSourceParam("filter=\\\"%s\\\"", rq_filter_param_.c_str());
+                    ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid filter (matched sql_validators[%zu]): %s", i, a_value.c_str());
+                    if ( nullptr == a_field ) {
+                        e.SetSourceParam("filter=\\\"%s\\\"", a_value.c_str());
+                    } else {
+                        e.SetSourceParam("filter[%s]=%s", a_field, a_value.c_str());
+                    }
                     return false;
                 }
                 value = m.suffix().str();

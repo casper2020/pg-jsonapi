@@ -181,8 +181,8 @@ namespace pg_jsonapi
         void         RequestOperationResponseData (const std::string& a_type, const std::string& a_id);
         void         SerializeResponse            (StringInfoData& a_response);
 
-        bool         IsValidUsingXssValidators    (const char* a_value);
-        bool         ValidateFilterParam          ();
+        bool         AttributeIsValidUsingXssValidators (const std::string& a_attribute, const std::string& a_value);
+        bool         FilterIsValidUsingSqlValidators    (const char* a_field, const std::string& a_value);
 
         static bool  IsValidHttpMethod            (const std::string& a_method);
 

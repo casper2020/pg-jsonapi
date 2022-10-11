@@ -219,7 +219,7 @@ bool pg_jsonapi::OperationRequest::BodyHasValidAttributes(const JsonapiJson::Val
     const JsonapiJson::Value::Members& attrs = a_value.getMemberNames();
     for ( JsonapiJson::Value::Members::const_iterator key = attrs.begin(); key != attrs.end(); ++key ) {
         if ( a_value[*key].isString() ) {
-            if ( !g_qb->IsValidUsingXssValidators(a_value[*key].asString().c_str()) ){
+            if ( !g_qb->AttributeIsValidUsingXssValidators(key->c_str(), a_value[*key].asString().c_str()) ){
                 return false;
             }
         } else if (      a_value[*key].isArray()
@@ -228,7 +228,7 @@ bool pg_jsonapi::OperationRequest::BodyHasValidAttributes(const JsonapiJson::Val
                     && ! a_value[*key].isNull()
                    ) {
             for ( JsonapiJson::ArrayIndex i = 0; i < a_value[*key].size(); i++ ) {
-                if ( !g_qb->IsValidUsingXssValidators(a_value[*key][i].asString().c_str()) ){
+                if ( !g_qb->AttributeIsValidUsingXssValidators(key->c_str(), a_value[*key][i].asString().c_str()) ){
                     return false;
                 }
             }

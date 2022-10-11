@@ -150,7 +150,11 @@
                 e.SetSourceParam("filter[%s]", field.c_str());
                 return false;
             }
-            rq_filter_field_param_[field] = pg_jsonapi::Utils::urlDecode(start, fpc - start);
+            std::string decoded_filter_ = pg_jsonapi::Utils::urlDecode(start, fpc - start);
+            if ( !FilterIsValidUsingSqlValidators(field.c_str(), decoded_filter_) ) {
+                return false;
+            }
+            rq_filter_field_param_[field] = decoded_filter_;
         } else {
             std::string decoded_filter_ = pg_jsonapi::Utils::urlDecode(start, fpc - start);
             ereport(DEBUG3, (errmsg_internal("pg_jsonapi decoded_filter_: %s", decoded_filter_.c_str())));
@@ -171,6 +175,9 @@
                 } else {
                     rq_filter_param_ += *(src);
                 }
+            }
+            if ( !FilterIsValidUsingSqlValidators(nullptr, rq_filter_param_) ) {
+                return false;
             }
         }
 
