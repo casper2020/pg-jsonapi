@@ -52,6 +52,12 @@ namespace pg_jsonapi
         E_HTTP_ERROR_INTERNAL_SERVER_ERROR  = E_HTTP_INTERNAL_SERVER_ERROR,
     } HttpStatusCode;
 
+    enum DBConfigValidator {
+        E_DB_CONFIG_XSS,
+        E_DB_CONFIG_SQL_WHITELIST,
+        E_DB_CONFIG_SQL_BLACKLIST
+    };
+
     /**
      * @brief Node used to interact with postgres, dealing with SPI interface,
      *        executing queries and keeping results in optimized way.
@@ -67,9 +73,8 @@ namespace pg_jsonapi
         StringSet           requested_urls_;
 
     private: // DB Configuration - initialized once by process
-        bool                    inited_validators_;
-        std::vector<std::regex> xss_validators_;
-        std::vector<std::regex> sql_validators_;
+        std::map<DBConfigValidator,std::vector<std::regex>> validators_regex_;
+        std::map<DBConfigValidator,std::string> validators_setting_;
 
     private: // Attributes - request variables filled while parsing request
 
@@ -148,6 +153,7 @@ namespace pg_jsonapi
         void               SerializeIncluded           (StringInfoData& a_response);
         void               SerializeErrors             (StringInfoData& a_response);
 
+        bool               GetSettingFromPGConfig      (DBConfigValidator a_validator);
         bool               InitValidatorsFromPGConfig  ();
 
     public: // Methods
@@ -182,7 +188,7 @@ namespace pg_jsonapi
         void         SerializeResponse            (StringInfoData& a_response);
 
         bool         AttributeIsValidUsingXssValidators (const std::string& a_attribute, const std::string& a_value);
-        bool         FilterIsValidUsingSqlValidators    (const char* a_field, const std::string& a_value);
+        bool         FilterIsValidUsingSqlValidators    (DBConfigValidator a_validator, const char* a_field, const std::string& a_value);
 
         static bool  IsValidHttpMethod            (const std::string& a_method);
 
