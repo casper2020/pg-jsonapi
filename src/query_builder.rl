@@ -2104,7 +2104,11 @@ bool pg_jsonapi::QueryBuilder::GetSettingFromPGConfig (DBConfigValidator a_valid
             ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: IGNORING invalid value on %s on DB configuration, expected string on array index [%d]", LIB_VERSION, validators_setting_[a_validator].c_str(), i)));
         } else {
             ereport(INFO, (errmsg_internal("jsonapi [libversion %s]: %s[%d]: %s", LIB_VERSION, validators_setting_[a_validator].c_str(), i, validators_root[i].asString().c_str())));
-            validators_regex_[a_validator].push_back(std::regex(validators_root[i].asString(), std::regex_constants::ECMAScript|std::regex_constants::icase));
+            if ( E_DB_CONFIG_SQL_WHITELIST == a_validator || E_DB_CONFIG_SQL_BLACKLIST == a_validator ) {
+                validators_regex_[a_validator].push_back(std::regex("(?:'[^']+'|"+validators_root[i].asString()+")", std::regex_constants::ECMAScript|std::regex_constants::icase));
+            } else {
+                validators_regex_[a_validator].push_back(std::regex(validators_root[i].asString(), std::regex_constants::ECMAScript|std::regex_constants::icase));
+            }
         }
     }
     return true;
