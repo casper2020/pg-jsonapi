@@ -153,8 +153,8 @@ namespace pg_jsonapi
         void               SerializeIncluded           (StringInfoData& a_response);
         void               SerializeErrors             (StringInfoData& a_response);
 
-        bool               GetSettingFromPGConfig      (DBConfigValidator a_validator);
-        bool               InitValidatorsFromPGConfig  ();
+        void               GetSettingFromPGConfig      (DBConfigValidator a_validator);
+        void               InitValidatorsFromPGConfig  ();
 
     public: // Methods
 
