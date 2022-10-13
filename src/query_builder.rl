@@ -201,9 +201,7 @@ bool pg_jsonapi::QueryBuilder::ParseRequestArguments (const char* a_method, size
                                      (int)a_company_schema_len, a_company_schema,
                                      (int)a_accounting_prefix_len, a_accounting_prefix)));
 
-    if ( ! InitValidatorsFromPGConfig() ) {
-        return false;
-    }
+    InitValidatorsFromPGConfig();
 
     JsonapiJson::Reader reader(JsonapiJson::Features::strictMode());
 
@@ -597,7 +595,7 @@ bool pg_jsonapi::QueryBuilder::ValidateRequest()
                 }
             } else {
                 if ( rq_page_size_param_ > config_->GetResource(type_pag).PageLimit() ) {
-                    AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "page[size] for resource '%s' cannot exceed %u", 
+                    AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "page[size] for resource '%s' cannot exceed %u",
                         config_->GetResource(type_pag).GetType().c_str(), config_->GetResource(type_pag).PageLimit())
                     .SetSourceParam("page[size]=%zd", rq_page_size_param_);
                 }
@@ -2071,39 +2069,43 @@ void pg_jsonapi::QueryBuilder::RequestOperationResponseData (const std::string& 
     return;
 }
 
-bool pg_jsonapi::QueryBuilder::GetSettingFromPGConfig (DBConfigValidator a_validator)
+void pg_jsonapi::QueryBuilder::GetSettingFromPGConfig (DBConfigValidator a_validator)
 {
     JsonapiJson::Reader reader(JsonapiJson::Features::all());
     JsonapiJson::Value  validators_root;
 
     std::string get_setting = "SELECT current_setting('cloudware." + validators_setting_[a_validator] + "', TRUE)";
     if ( ! SPIExecuteCommand(get_setting, SPI_OK_SELECT) ) {
-        return false;
+        return;
     }
     if ( 0 == SPI_processed ) {
         ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: no %s on DB configuration", LIB_VERSION, validators_setting_[a_validator].c_str())));
-        return true; // validators are not mandatory
+        return; // validators are not mandatory
     }
 
     char* config_s = SPI_getvalue(SPI_tuptable->vals[0], SPI_tuptable->tupdesc, 1);
     if ( NULL == config_s || 0 == strlen(config_s) ) {
         ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: empty configuration of %s on DB configuration", LIB_VERSION, validators_setting_[a_validator].c_str())));
-        return true;
+        return;
     }
 
     if (   ! reader.parse(config_s, config_s + strlen(config_s), validators_root, false)
         || ! ( validators_root.isArray() ) ) {
         ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: IGNORING invalid configuration of %s on DB configuration, expected array of strings but configuration is: %s", LIB_VERSION, validators_setting_[a_validator].c_str(), config_s)));
-        return false;
+        return;
+    }
+    if ( 0 == validators_root.size() ) {
+        ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: IGNORING empty configuration of %s on DB configuration", LIB_VERSION, validators_setting_[a_validator].c_str())));
+        return;
     }
 
-    ereport(INFO, (errmsg_internal("jsonapi [libversion %s]: checking %u %s from DB configuration", LIB_VERSION, validators_root.size(), validators_setting_[a_validator].c_str())));
+    ereport(LOG, (errmsg_internal("jsonapi [libversion %s]: using %u %s from DB configuration", LIB_VERSION, validators_root.size(), validators_setting_[a_validator].c_str())));
     validators_regex_[a_validator].reserve(validators_root.size());
     for ( uint32_t i = 0; i < validators_root.size(); i++ ) {
         if ( ! validators_root[i].isString() ) {
             ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: IGNORING invalid value on %s on DB configuration, expected string on array index [%d]", LIB_VERSION, validators_setting_[a_validator].c_str(), i)));
         } else {
-            ereport(INFO, (errmsg_internal("jsonapi [libversion %s]: %s[%d]: %s", LIB_VERSION, validators_setting_[a_validator].c_str(), i, validators_root[i].asString().c_str())));
+            ereport(DEBUG1, (errmsg_internal("jsonapi [libversion %s]: %s[%d]: %s", LIB_VERSION, validators_setting_[a_validator].c_str(), i, validators_root[i].asString().c_str())));
             if ( E_DB_CONFIG_SQL_WHITELIST == a_validator || E_DB_CONFIG_SQL_BLACKLIST == a_validator ) {
                 validators_regex_[a_validator].push_back(std::regex("(?:'[^']+'|"+validators_root[i].asString()+")", std::regex_constants::ECMAScript|std::regex_constants::icase));
             } else {
@@ -2111,37 +2113,35 @@ bool pg_jsonapi::QueryBuilder::GetSettingFromPGConfig (DBConfigValidator a_valid
             }
         }
     }
-    return true;
+    return;
 }
 
-bool pg_jsonapi::QueryBuilder::InitValidatorsFromPGConfig ()
+void pg_jsonapi::QueryBuilder::InitValidatorsFromPGConfig ()
 {
-    ereport(DEBUG4, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
+    ereport(DEBUG3, (errmsg_internal("jsonapi: %s", __FUNCTION__)));
 
     if ( ! validators_regex_.empty() ) {
         // already initialized
-        return true;
+        return;
     }
 
     for ( std::map<DBConfigValidator,std::string>::const_iterator it = validators_setting_.begin(); it != validators_setting_.end(); ++it ) {
-        if ( ! GetSettingFromPGConfig(it->first) ) {
-            return false;
-        }
+        GetSettingFromPGConfig(it->first);
     }
-
-    return true;
+    return;
 }
 
 bool pg_jsonapi::QueryBuilder::AttributeIsValidUsingXssValidators (const std::string& a_attribute, const std::string& a_value)
 {
-    ereport(DEBUG4, (errmsg_internal("jsonapi: %s attribute:%s a_value:%s", __FUNCTION__, a_attribute.c_str(), a_value.c_str())));
-    if ( validators_regex_[E_DB_CONFIG_XSS].size() > 0 ) {
+    ereport(DEBUG3, (errmsg_internal("jsonapi: %s attribute:%s a_value:%s", __FUNCTION__, a_attribute.c_str(), a_value.c_str())));
+    if ( validators_regex_.count(E_DB_CONFIG_XSS) && validators_regex_[E_DB_CONFIG_XSS].size() > 0 ) {
         std::string decoded_filter_ = pg_jsonapi::Utils::urlDecode(a_value.c_str(), a_value.length());
         std::smatch m;
         for ( size_t i = 0; i < validators_regex_[E_DB_CONFIG_XSS].size(); i++ ) {
             const std::string value = std::string(decoded_filter_);
-            ereport(DEBUG4, (errmsg_internal("checking decoded attribute \"%s\" [%s] against rule on %s[%zu]", a_attribute.c_str(), value.c_str(), validators_setting_[E_DB_CONFIG_XSS].c_str(), i)));
+            ereport(DEBUG3, (errmsg_internal("checking decoded attribute \"%s\" [%s] against rule on %s[%zu]", a_attribute.c_str(), value.c_str(), validators_setting_[E_DB_CONFIG_XSS].c_str(), i)));
             while (std::regex_search(value, m, validators_regex_[E_DB_CONFIG_XSS][i]) ) {
+                ereport(DEBUG1, (errmsg_internal("match: %s",  m[0].str().c_str())));
                 AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "attribute \"%s\" has invalid value (matched %s[%zu]): %s", a_attribute.c_str(), validators_setting_[E_DB_CONFIG_XSS].c_str(), i, a_value.c_str());
                 return false;
             }
@@ -2153,20 +2153,21 @@ bool pg_jsonapi::QueryBuilder::AttributeIsValidUsingXssValidators (const std::st
 
 bool pg_jsonapi::QueryBuilder::FilterIsValidUsingSqlValidators (DBConfigValidator a_validator, const char* a_field, const std::string& a_value)
 {
-    ereport(DEBUG4, (errmsg_internal("jsonapi: %s field:%s a_value:%s", __FUNCTION__, a_field, a_value.c_str())));
-    if ( validators_regex_[a_validator].size() > 0 ) {
+    ereport(DEBUG3, (errmsg_internal("jsonapi: %s field:%s a_value:%s", __FUNCTION__, a_field, a_value.c_str())));
+    if ( validators_regex_.count(a_validator) && validators_regex_[a_validator].size() > 0 ) {
         // URL decode was already made while parsing
         std::smatch m;
         for ( size_t i = 0; i < validators_regex_[a_validator].size(); i++ ) {
             std::string value = std::string(a_value);
-            ereport(DEBUG4, (errmsg_internal("checking filter [%s] against rule on %s[%zu]", value.c_str(), validators_setting_[a_validator].c_str(), i)));
+            ereport(DEBUG3, (errmsg_internal("checking filter [%s] against rule on %s[%zu]", value.c_str(), validators_setting_[a_validator].c_str(), i)));
             while (std::regex_search(value, m, validators_regex_[a_validator][i]) ) {
                 if ('\'' != m[0].str()[0] ) {
+                    ereport(DEBUG1, (errmsg_internal("match: %s",  m[0].str().c_str())));
                     ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid filter (matched %s[%zu]): %s", validators_setting_[a_validator].c_str(), i, a_value.c_str());
                     if ( nullptr == a_field ) {
-                        e.SetSourceParam("filter=\\\"%s\\\"", a_value.c_str());
+                        e.SetSourceParam("filter");
                     } else {
-                        e.SetSourceParam("filter[%s]=%s", a_field, a_value.c_str());
+                        e.SetSourceParam("filter[%s]", a_field);
                     }
                     return false;
                 }

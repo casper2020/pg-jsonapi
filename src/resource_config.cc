@@ -166,7 +166,7 @@ bool pg_jsonapi::ResourceConfig::IsValidAttribute (const std::string& a_field) c
  */
 bool pg_jsonapi::ResourceConfig::SetAttribute (const JsonapiJson::Value& a_attr_config)
 {
-    ereport(DEBUG3, (errmsg_internal("jsonapi: %s %s", __FUNCTION__, type_.c_str())));
+    ereport(DEBUG4, (errmsg_internal("jsonapi: %s %s", __FUNCTION__, type_.c_str())));
 
     std::string key;
     std::string col;
