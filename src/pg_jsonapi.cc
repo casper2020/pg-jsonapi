@@ -165,7 +165,11 @@ jsonapi(PG_FUNCTION_ARGS)
     bool           nulls[2];
 
     /* Initialise attributes information in the tuple descriptor */
-    tupdesc = CreateTemplateTupleDesc(2, false);
+#if PG_MAJORVERSION_NUM >= 15
+    tupdesc = CreateTemplateTupleDesc(2);
+#else
+    tupdesc = CreateTemplateTupleDesc(2,false);
+#endif
     TupleDescInitEntry(tupdesc, (AttrNumber) 1, "http_status", INT4OID, -1, 0);
     TupleDescInitEntry(tupdesc, (AttrNumber) 2, "response"   , TEXTOID, -1, 0);
     nulls[0] = nulls[1] = false;

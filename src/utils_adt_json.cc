@@ -34,7 +34,11 @@ extern "C" {
 #include "utils/builtins.h"
 #include "utils/date.h"
 #include "utils/datetime.h"
+#if PG_MAJORVERSION_NUM >= 15
+#include "common/jsonapi.h"
+#else
 #include "utils/jsonapi.h"
+#endif
 #include "utils/typcache.h"
 #include "utils/syscache.h"
 } // extern "C"
