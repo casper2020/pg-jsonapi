@@ -134,7 +134,7 @@ SHLIB_LINK  += $(OPENSSL_LDFLAGS)
 # developer
 dev:
 	xcodebuild -configuration Debug
-	make install
+	sudo make install
 
 # so
 so:
