@@ -20,6 +20,8 @@
  */
 
 extern "C" {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #include "postgres.h"
 #include "executor/spi.h"
 #include "utils/json.h"
@@ -27,6 +29,7 @@ extern "C" {
 #include "access/htup_details.h"
 #include "catalog/pg_type.h"
 #include "funcapi.h"
+#pragma GCC diagnostic pop
 } // extern "C"
 #include "query_builder.h"
 

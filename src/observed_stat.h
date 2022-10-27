@@ -30,8 +30,11 @@
 #include "json/json.h"
 
 extern "C" {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #include "postgres.h"
 #include "executor/spi.h"
+#pragma GCC diagnostic pop
 } // extern "C"
 
 #include "resource_config.h"

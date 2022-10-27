@@ -21,9 +21,12 @@
 
 #include "json/json.h"
 extern "C" {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #include "postgres.h"
 #include "executor/spi.h"
 #include "catalog/namespace.h"
+#pragma GCC diagnostic pop
 } // extern "C"
 #include "document_config.h"
 #include "query_builder.h"

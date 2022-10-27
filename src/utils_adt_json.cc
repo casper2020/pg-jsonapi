@@ -22,6 +22,8 @@
 #include "utils_adt_json.h"
 
 extern "C" {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #include "access/htup_details.h"
 #include "access/transam.h"
 #include "catalog/pg_cast.h"
@@ -41,6 +43,7 @@ extern "C" {
 #endif
 #include "utils/typcache.h"
 #include "utils/syscache.h"
+#pragma GCC diagnostic pop
 } // extern "C"
 
 

@@ -19,6 +19,8 @@
  * along with pg-jsonapi.  If not, see <http://www.gnu.org/licenses/>.
  */
 extern "C" {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #include "postgres.h"
 #include "executor/spi.h"
 #include "access/xact.h"
@@ -27,6 +29,7 @@ extern "C" {
 #include "utils/json.h"
 #include "parser/parse_coerce.h"
 #include "pgstat.h"
+#pragma GCC diagnostic pop
 } // extern "C"
 #include "query_builder.h"
 #include "utils_adt_json.h"

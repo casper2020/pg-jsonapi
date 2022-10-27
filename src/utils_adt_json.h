@@ -26,11 +26,14 @@
 
 #include <string>
 extern "C" {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #include "postgres.h"
 #include "catalog/pg_type.h"
 #include "utils/array.h"
 #include "utils/json.h"
 #include "utils/lsyscache.h"
+#pragma GCC diagnostic pop
 } // extern "C"
 
 namespace pg_jsonapi

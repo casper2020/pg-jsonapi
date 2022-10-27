@@ -23,10 +23,12 @@
 #define CLD_PG_JSONAPI_RESOURCE_CONFIG_H
 
 extern "C" {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #include "postgres.h"
 #include "catalog/namespace.h"
-
 #include "utils/lsyscache.h"
+#pragma GCC diagnostic pop
 } // extern "C"
 
 #include <stdlib.h>

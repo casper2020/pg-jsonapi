@@ -31,7 +31,10 @@
 
 extern "C" {
 #include "postgres.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #include "executor/spi.h"
+#pragma GCC diagnostic pop
 } // extern "C"
 
 #include "resource_config.h"
