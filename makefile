@@ -71,7 +71,7 @@ endif
 
 LIB_NAME:= pg-jsonapi
 ifndef LIB_VERSION
-	LIB_VERSION := 2.6.0
+	LIB_VERSION := 2.6.1
 endif
 
 include settings.mk

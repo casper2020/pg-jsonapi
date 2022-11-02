@@ -76,6 +76,8 @@ namespace pg_jsonapi
 
         static std::string urlDecode (const char* a_url, size_t a_url_len);
 
+        static std::string collapseQuerySpaces(const std::string& a_query);
+
     };
 
 } // namespace pg_jsonapi

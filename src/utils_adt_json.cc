@@ -485,6 +485,42 @@ std::string pg_jsonapi::Utils::urlDecode(const char* a_url, size_t a_url_len) {
             ret += a_url[i];
         }
     }
-    ereport(DEBUG3, (errmsg_internal("urlDecode: %s", ret.c_str())));
+    ereport(DEBUG4, (errmsg_internal("urlDecode: %s", ret.c_str())));
     return (ret);
+}
+
+/**
+ * @brief Collapses consecutive spaces on query, except on text between quotes.
+ *
+ * @li a_query The string with spaces to be collapsed.
+ *
+ * @return String without duplicate spaces.
+ */
+std::string pg_jsonapi::Utils::collapseQuerySpaces(const std::string& a_query) {
+
+    size_t original_len = a_query.length();
+    std::string ret;
+    size_t i = 0;
+    while ( i < original_len ) {
+        ret += a_query[i];
+        i++;
+        if ( '\'' == a_query[i-1] ) {
+            /* copy everything until next single quote */
+            while ( i < original_len && '\'' != a_query[i] )
+            {
+                ret += a_query[i];
+                i++;
+            }
+            if ( i < original_len && '\'' == a_query[i] ) {
+                ret += a_query[i];
+                i++;
+            }
+        } else if ( ' ' == a_query[i-1] && i < original_len && ' ' == a_query[i] ) {
+            do {
+                i++;
+            } while ( i < original_len && ' ' == a_query[i] );
+        }
+    }
+    ereport(DEBUG4, (errmsg_internal("collapseQuerySpaces: %s", ret.c_str())));
+    return ret;
 }

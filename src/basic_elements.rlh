@@ -176,6 +176,8 @@
                     rq_filter_param_ += *(src);
                 }
             }
+
+            rq_filter_param_ = pg_jsonapi::Utils::collapseQuerySpaces(rq_filter_param_);
             if ( ! FilterIsValidUsingSqlValidators(E_DB_CONFIG_SQL_WHITELIST, nullptr, rq_filter_param_) ) {
                 return false;
             }
