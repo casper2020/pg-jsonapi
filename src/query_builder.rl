@@ -2145,7 +2145,7 @@ bool pg_jsonapi::QueryBuilder::AttributeIsValidUsingXssValidators (const std::st
             ereport(DEBUG3, (errmsg_internal("checking decoded attribute \"%s\" [%s] against rule on %s[%zu]", a_attribute.c_str(), value.c_str(), validators_setting_[E_DB_CONFIG_XSS].c_str(), i)));
             while (std::regex_search(value, m, validators_regex_[E_DB_CONFIG_XSS][i]) ) {
                 ereport(DEBUG1, (errmsg_internal("match: %s",  m[0].str().c_str())));
-                AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "attribute \"%s\" has invalid value (matched %s[%zu]): %s", a_attribute.c_str(), validators_setting_[E_DB_CONFIG_XSS].c_str(), i, a_value.c_str());
+                AddError(JSONAPI_MAKE_SQLSTATE("JA101"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "attribute \"%s\" has invalid value (matched %s[%zu]): %s", a_attribute.c_str(), validators_setting_[E_DB_CONFIG_XSS].c_str(), i, a_value.c_str());
                 return false;
             }
         }
@@ -2166,7 +2166,7 @@ bool pg_jsonapi::QueryBuilder::FilterIsValidUsingSqlValidators (DBConfigValidato
             while (std::regex_search(value, m, validators_regex_[a_validator][i]) ) {
                 if ('\'' != m[0].str()[0] ) {
                     ereport(DEBUG1, (errmsg_internal("match: %s",  m[0].str().c_str())));
-                    ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA011"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid filter (matched %s[%zu]): %s", validators_setting_[a_validator].c_str(), i, a_value.c_str());
+                    ErrorObject& e = AddError(JSONAPI_MAKE_SQLSTATE("JA102"), E_HTTP_BAD_REQUEST).SetMessage(NULL, "invalid filter (matched %s[%zu]): %s", validators_setting_[a_validator].c_str(), i, a_value.c_str());
                     if ( nullptr == a_field ) {
                         e.SetSourceParam("filter");
                     } else {

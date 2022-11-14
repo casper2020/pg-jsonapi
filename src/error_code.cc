@@ -51,6 +51,11 @@ namespace pg_jsonapi {
         ,{ "JA019", E_HTTP_BAD_REQUEST,           "Erro de sistema JA019: demasiados resultados na resposta de topo. Por favor utilize menos items por página." }       // too many resources on top level
         ,{ "JA020", E_HTTP_BAD_REQUEST,           "Erro de sistema JA020: demasiados resultados nas relações a incluir. Por favor utilize menos items por página." }    // too many items on resource to be included
 
+        // XssAttack to be used on xss_validators // validators_setting_[E_DB_CONFIG_XSS]
+        ,{ "JA101", E_HTTP_BAD_REQUEST,           "Texto inválido num dos campos." }                                                            // invalid request XssAttack
+        // SQL read injection to be used on sql_validators // validators_setting_ E_DB_CONFIG_SQL_WHITELIST / E_DB_CONFIG_SQL_BLACKLIST
+        ,{ "JA102", E_HTTP_BAD_REQUEST,           "Texto inválido num dos campos." }                                                            // invalid request SQL read injection
+
         // default error to be used per HTTP status codes
         // http://www.postgresql.org/docs/9.4/static/errcodes-appendix.html
 
