@@ -2082,23 +2082,23 @@ void pg_jsonapi::QueryBuilder::GetSettingFromPGConfig (DBConfigValidator a_valid
         return;
     }
     if ( 0 == SPI_processed ) {
-        ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: no %s on DB configuration", LIB_VERSION, validators_setting_[a_validator].c_str())));
+        ereport(DEBUG1, (errmsg_internal("jsonapi [libversion %s]: no %s on DB configuration", LIB_VERSION, validators_setting_[a_validator].c_str())));
         return; // validators are not mandatory
     }
 
     char* config_s = SPI_getvalue(SPI_tuptable->vals[0], SPI_tuptable->tupdesc, 1);
     if ( NULL == config_s || 0 == strlen(config_s) ) {
-        ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: empty configuration of %s on DB configuration", LIB_VERSION, validators_setting_[a_validator].c_str())));
+        ereport(DEBUG1, (errmsg_internal("jsonapi [libversion %s]: empty configuration of %s on DB configuration", LIB_VERSION, validators_setting_[a_validator].c_str())));
         return;
     }
 
     if (   ! reader.parse(config_s, config_s + strlen(config_s), validators_root, false)
         || ! ( validators_root.isArray() ) ) {
-        ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: IGNORING invalid configuration of %s on DB configuration, expected array of strings but configuration is: %s", LIB_VERSION, validators_setting_[a_validator].c_str(), config_s)));
+        ereport(DEBUG1, (errmsg_internal("jsonapi [libversion %s]: IGNORING invalid configuration of %s on DB configuration, expected array of strings but configuration is: %s", LIB_VERSION, validators_setting_[a_validator].c_str(), config_s)));
         return;
     }
     if ( 0 == validators_root.size() ) {
-        ereport(WARNING, (errmsg_internal("jsonapi [libversion %s]: IGNORING empty configuration of %s on DB configuration", LIB_VERSION, validators_setting_[a_validator].c_str())));
+        ereport(DEBUG1, (errmsg_internal("jsonapi [libversion %s]: IGNORING empty configuration of %s on DB configuration", LIB_VERSION, validators_setting_[a_validator].c_str())));
         return;
     }
 
