@@ -51,6 +51,8 @@ PG_FUNCTION_INFO_V1(get_jsonapi_company_schema);
 PG_FUNCTION_INFO_V1(get_jsonapi_sharded_schema);
 PG_FUNCTION_INFO_V1(get_jsonapi_accounting_schema);
 PG_FUNCTION_INFO_V1(get_jsonapi_accounting_prefix);
+PG_FUNCTION_INFO_V1(jsonapi_version);
+PG_FUNCTION_INFO_V1(jsonapi_v2);
 } // extern "C"
 
 /* Main request */
@@ -335,6 +337,121 @@ get_jsonapi_company(PG_FUNCTION_ARGS)
     } else {
         PG_RETURN_NULL();
     }
+}
+
+
+/**
+ * @brief JSONAPI interface to PostreSQL
+ *
+ * @return STRING
+ */
+Datum
+jsonapi_version(PG_FUNCTION_ARGS)
+{
+    jsonapi_initqb();
+    /* connect to SPI manager on this level to start the memory context */
+    if ( ! g_qb->SPIConnect() ) {
+        // ... failed ...
+        PG_RETURN_NULL();
+    }
+    /* prepare result */
+    text* rv = cstring_to_text("{\"version\":\"" LIB_VERSION "\"}");
+    /* serialize */
+    TupleDesc tupdesc;
+#if PG_MAJORVERSION_NUM >= 15
+    tupdesc = CreateTemplateTupleDesc(2);
+#else
+    tupdesc = CreateTemplateTupleDesc(2,false);
+#endif
+    TupleDescInitEntry(tupdesc, (AttrNumber) 1, "http_status", INT4OID, -1, 0);
+    TupleDescInitEntry(tupdesc, (AttrNumber) 2, "response"   , TEXTOID, -1, 0);
+    BlessTupleDesc(tupdesc);
+    
+    Datum values[2];
+    values[0] = Int32GetDatum(200);
+    values[1] = PointerGetDatum(rv);
+
+    bool nulls[2]; nulls[0] = nulls[1] = false;
+    /* disconnect from SPI manager only after serialization because of memory context and HTTP status */
+    g_qb->SPIDisconnect();
+    g_qb->Clear();
+    /* done */
+    PG_RETURN_DATUM(HeapTupleGetDatum(heap_form_tuple(tupdesc, values, nulls)));
+}
+
+/**
+ * @brief JSONAPI interface to PostreSQL
+ *
+ * @param method            The http request method: GET, POST, PATCH or DELETE.
+ * @param url               The request url.
+ * @param body              The request body.
+ * @param user_id           The user identification.
+ * @param company_id        The company identification.
+ * @param company_schema    The schema to be used, if flag request-company-schema is true (we know it's redundant with schema argument).
+ * @param accounting_schema The schema to be used, if flag request-accounting-schema is true (default).
+ * @param accounting_prefix The prefix to be added to define the resource relation.
+ *
+ * @return A top-level JSON document containing data or errors.
+ */
+Datum
+jsonapi_v2(PG_FUNCTION_ARGS)
+{
+    ereport(DEBUG3, (errmsg_internal("jsonapi: %s PG_NARGS:%d", __FUNCTION__, PG_NARGS())));
+
+    StringInfoData response;
+    TupleDesc      tupdesc;
+    Datum          values[2];
+    bool           nulls[2];
+
+    /* Initialise attributes information in the tuple descriptor */
+#if PG_MAJORVERSION_NUM >= 15
+    tupdesc = CreateTemplateTupleDesc(2);
+#else
+    tupdesc = CreateTemplateTupleDesc(2,false);
+#endif
+    TupleDescInitEntry(tupdesc, (AttrNumber) 1, "http_status", INT4OID, -1, 0);
+    TupleDescInitEntry(tupdesc, (AttrNumber) 2, "response"   , TEXTOID, -1, 0);
+    nulls[0] = nulls[1] = false;
+    BlessTupleDesc(tupdesc);
+    initStringInfo(&response);
+    appendStringInfo(&response, "%*.*s", VARHDRSZ, VARHDRSZ, "~~~~~~~~~~");
+    jsonapi_resetqb();
+
+    if ( PG_NARGS() != 8 || PG_ARGISNULL(0) || PG_ARGISNULL(1) ) {
+        g_qb->AddError(JSONAPI_MAKE_SQLSTATE("JA010"), pg_jsonapi::E_HTTP_BAD_REQUEST).SetMessage(NULL, "Expected arguments are: ( method, url, body , user_id, company_id, company_schema, accounting_schema, accounting_prefix )");
+    }
+
+    if ( ! g_qb->HasErrors() ) {
+        // non-optional parameters
+        text*   method          = PG_GETARG_TEXT_PP(0);
+        text*   url             = PG_GETARG_TEXT_PP(1);
+
+        // optional parameters
+        text*   body                = (PG_NARGS() <= 2 || PG_ARGISNULL(2)) ? NULL : PG_GETARG_TEXT_PP(2);
+        text*   user_id             = (PG_NARGS() <= 3 || PG_ARGISNULL(3)) ? NULL : PG_GETARG_TEXT_PP(3);
+        text*   company_id          = (PG_NARGS() <= 4 || PG_ARGISNULL(4)) ? NULL : PG_GETARG_TEXT_PP(4);
+        text*   company_schema      = (PG_NARGS() <= 5 || PG_ARGISNULL(5)) ? NULL : PG_GETARG_TEXT_PP(5);
+        text*   sharded_schema      = company_schema;
+        text*   accounting_schema   = (PG_NARGS() <= 6 || PG_ARGISNULL(6)) ? NULL : PG_GETARG_TEXT_PP(6);
+        text*   accounting_prefix   = (PG_NARGS() <= 7 || PG_ARGISNULL(7)) ? NULL : PG_GETARG_TEXT_PP(7);
+
+        jsonapi_common(method, url, body, user_id, company_id, company_schema, sharded_schema, accounting_schema, accounting_prefix);
+    }
+
+    /* serialize the results */
+    g_qb->SerializeResponse(response);
+
+    /* return from jsonapi */
+    ereport(g_qb->HasErrors() ? LOG : DEBUG1, (errmsg_internal("jsonapi: http_status:%d response: %.*s", g_qb->GetHttpStatus(), response.len-VARHDRSZ,  response.data+VARHDRSZ)));
+    SET_VARSIZE(response.data, response.len + VARHDRSZ);
+    values[0] = Int32GetDatum(g_qb->GetHttpStatus());
+    values[1] = PointerGetDatum(response.data);
+
+    /* disconnect from SPI manager only after serialization because of memory context and HTTP status */
+    g_qb->SPIDisconnect();
+    g_qb->Clear();
+
+    PG_RETURN_DATUM(HeapTupleGetDatum(heap_form_tuple(tupdesc, values, nulls)));
 }
 
 } // extern "C" functions
